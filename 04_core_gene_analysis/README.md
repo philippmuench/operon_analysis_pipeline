@@ -64,3 +64,31 @@ python create_core_gene_msa.py
 - 1,269 genes present in ≥95% of test genomes
 - 1,058 genes present in 100% of test genomes
 - Operon genes (frpC, glpC, etc.) are NOT core genes (present in 96% of test genomes)
+## Threshold Analysis
+
+The pipeline now includes comprehensive threshold analysis to understand how different prevalence thresholds affect core gene definitions:
+
+### New Script: plot_core_gene_thresholds.py
+
+**Purpose**: Analyze the impact of different prevalence thresholds on core gene counts
+
+**Features**:
+- Creates accumulation curves showing core gene counts vs. prevalence thresholds
+- Highlights commonly used thresholds (90%, 95%, 99%, 100%)
+- Generates both full-range and zoomed (85-100%) plots
+- Produces summary table with gene counts at key thresholds
+
+**Output Files**:
+- `core_gene_threshold_curve.png` - Full threshold range (0-100%)
+- `core_gene_threshold_curve_zoomed.png` - Zoomed view (85-100%)
+- `core_gene_threshold_summary.csv` - Summary table with key statistics
+
+**Usage**:
+```bash
+python plot_core_gene_thresholds.py \
+    --core-genes-file output/gene_prevalence_stats.csv \
+    --prokka-dir ../01_prokka_annotation/output/prokka_results \
+    --output-dir output
+```
+
+**Integration**: Automatically run as part of `run_core_analysis.sh` pipeline.

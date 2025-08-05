@@ -108,11 +108,28 @@ echo "   - Core genes identified: $CORE_GENE_COUNT"
 echo "   - Sequences extracted: $FASTA_COUNT genes"
 echo "   - MSAs created: $ALIGNMENT_COUNT"
 echo ""
+# Step 5: Threshold Analysis
+echo ""
+echo "Step 5: Creating threshold analysis plots..."
+echo "=========================================="
+python plot_core_gene_thresholds.py \
+    --core-genes-file output/gene_prevalence_stats.csv \
+    --prokka-dir ../01_prokka_annotation/output/prokka_results \
+    --output-dir output
+
+if [ $? -eq 0 ]; then
+    echo "✅ Threshold analysis complete"
+else
+    echo "⚠️  Warning: Threshold analysis failed"
+fi
+
+
 echo "📁 Output directories:"
 echo "   - output/core_genes_95pct.txt"
 echo "   - output/gene_prevalence_stats.csv"
 echo "   - output/core_gene_sequences/"
 echo "   - output/core_gene_alignments/"
+echo "   - output/core_gene_threshold_*.png"
 echo ""
 
 # Check final results
