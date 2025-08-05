@@ -12,3 +12,5 @@
 *.log
 *.out
 *.err
+CLAUDE.md
+test_*.py
