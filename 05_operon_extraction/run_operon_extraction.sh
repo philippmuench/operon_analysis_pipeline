@@ -102,6 +102,16 @@ else
     PROMOTER_RESULTS=0
 fi
 
+# Step 4a: Create conservation plots for all operon genes
+echo ""
+echo "Step 4a: Creating conservation plots for all operon genes..."
+echo "========================================================"
+python create_gene_conservation_plots.py \
+    --msa-dir output/msa/dna_alignments \
+    --output-dir output/plots/gene_conservation
+echo "Gene conservation plots completed"
+echo ""
+
 # Step 4: Create enhanced promoter plots with Pribnow box
 echo ""
 echo "Step 4: Creating enhanced promoter conservation plots..."
