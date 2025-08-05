@@ -17,7 +17,10 @@ Uses Prokka annotations from `../01_prokka_annotation/output/prokka_results/`
 All outputs are written to the `output/` directory:
 - `core_genes_95pct.txt`: List of genes present in ≥95% of genomes
 - `gene_prevalence_stats.csv`: Prevalence statistics for all genes
-- `core_gene_sequences/`: FASTA files for each core gene (created by extract_core_sequences.sh)
+- `core_gene_sequences/`: FASTA files for each core gene
+- `core_gene_alignments/`: Multiple sequence alignments for each core gene
+- `extraction_summary.txt`: Summary of sequence extraction
+- `msa_summary.txt`: Summary of MSA creation
 
 ## Scripts
 
@@ -25,25 +28,35 @@ All outputs are written to the `output/` directory:
 Identifies genes present in ≥95% of genomes from Prokka GFF files.
 Automatically detects and reports the number of genomes being processed.
 
-### `extract_core_sequences.sh` 
-Extracts nucleotide sequences for all core genes from each genome.
+### `extract_core_sequences.py`
+Extracts nucleotide sequences for all core genes from Prokka output.
+Uses parallel processing to efficiently extract from all genomes.
 
-### `calculate_diversity.py`
-Calculates pairwise identity and diversity metrics for core genes.
+### `create_core_gene_msa.py`
+Creates multiple sequence alignments for all core genes using MAFFT.
+Processes genes in parallel for efficiency.
 
 ### `run_core_analysis.sh`
 SLURM script to run the full analysis pipeline.
 
 ## Usage
+
+### Complete Pipeline (Recommended)
+```bash
+# Run full analysis pipeline via SLURM
+sbatch run_core_analysis.sh
+```
+
+### Manual Steps
 ```bash
 # Step 1: Identify core genes (processes all genomes in step 01 output)
 python identify_core_genes.py
 
 # Step 2: Extract sequences
-sbatch extract_core_sequences.sh
+python extract_core_sequences.py
 
-# Step 3: Calculate diversity
-python calculate_diversity.py
+# Step 3: Create MSAs
+python create_core_gene_msa.py
 ```
 
 ## Key Findings (from test run)
