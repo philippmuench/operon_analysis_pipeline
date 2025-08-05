@@ -1,0 +1,38 @@
+name: efs_diversity
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Bioinformatics tools
+  - prokka=1.14.6
+  - hmmer=3.4
+  - mafft=7.520
+  - muscle=5.1
+  - fasttree=2.1.11
+  
+  # Python and data analysis
+  - python=3.10
+  - numpy=1.24.*
+  - pandas=2.0.*
+  - matplotlib=3.7.*
+  - seaborn=0.12.*
+  - scipy=1.10.*
+  - biopython=1.81
+  
+  # Jupyter for interactive analysis
+  - jupyter=1.0.*
+  - jupyterlab=3.6.*
+  
+  # Additional utilities
+  - samtools=1.17
+  - bedtools=2.31.0
+  - parallel=20230922
+  
+  # For handling compressed files
+  - pigz=2.8
+  
+  # pip dependencies
+  - pip
+  - pip:
+    - dendropy>=4.5.2
+    - pyhmmer>=0.10.0
