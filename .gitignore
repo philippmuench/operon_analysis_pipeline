@@ -1,0 +1,75 @@
+# Output directories
+output/
+*/output/
+results/
+data/
+
+# Prokka outputs
+prokka_output/
+prokka_results/
+*.err
+*.log
+
+# SLURM logs
+*.out
+slurm-*.out
+*.err
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Test files
+test_*
+*.test
+
+# Large data files
+*.fasta
+*.faa
+*.ffn
+*.fna
+*.gff
+*.gbk
+*.gz
+*.blast
+*.tsv
+*.csv
+
+# Alignment files
+*.aln
+*.phy
+*.nex
+
+# HMM files
+*.hmm
+*.h3*
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Project specific
+CLAUDE.md
+genome_list*.txt
+processing_status/
+logs/
+
+# Keep important data files
+!environment.yml
+!operon.gb
