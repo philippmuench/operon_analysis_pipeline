@@ -3,33 +3,23 @@
 This directory contains scripts for searching operon genes across all annotated genomes.
 
 ## Input
-- **Query**: `../data/operon_genes.fasta` - Protein sequences from the reference operon
-- **Databases**: `../prokka_output/*/` - Protein sequences from Prokka annotations
+- **Query proteins**: `../02_operon_extraction/output/operon_genes_protein.fasta` - Protein sequences from the reference operon
+- **Query non-coding**: `../02_operon_extraction/output/operon_noncoding_nt.fasta` - Non-coding sequences from the reference operon
+- **Databases**: `../01_prokka_annotation/output/prokka_results/*/` - Genome sequences from Prokka annotations
 
 ## Output
-**Production mode:**
-- `../data/blast_results/*_blast.txt` - BLAST results for each genome
-- `../results/operon_presence_summary.csv` - Summary of operon presence across genomes
-- `../results/all_blast_hits.csv` - Compiled BLAST hits
-
-**Test mode:**
-- `output/blast_results/*_blast.txt` - BLAST results for first 50 genomes
-- `output/operon_presence_summary.csv` - Summary for test genomes
-- `output/all_blast_hits.csv` - Compiled hits for test genomes
+- `output/blast_results/*_genes_blast.txt` - BLAST results for protein sequences (tblastn)
+- `output/blast_results/*_noncoding_blast.txt` - BLAST results for non-coding sequences (blastn)
+- `output/operon_presence_summary.csv` - Summary of operon presence across genomes
+- `output/all_blast_hits.csv` - Compiled BLAST hits
 
 ## Usage
 ```bash
 # Run BLAST search on all genomes
 sbatch run_blast_search.sh
 
-# Test mode: BLAST search on first 50 genomes only
-sbatch run_blast_search.sh --test
-
-# Process results (all genomes)
+# Process results
 python process_blast_results.py
-
-# Process results (test mode - first 50 genomes)
-python process_blast_results.py --test
 ```
 
 ## Parameters
