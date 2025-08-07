@@ -12,7 +12,7 @@ import argparse
 
 def create_msa_for_gene(args):
     """Create MSA for a single gene using MAFFT."""
-    gene_file, output_dir = args
+    gene_file, output_dir, timeout = args
     
     gene_name = os.path.basename(gene_file).replace('.fasta', '')
     output_file = os.path.join(output_dir, f"{gene_name}_aligned.fasta")
@@ -28,9 +28,11 @@ def create_msa_for_gene(args):
     # Run MAFFT
     try:
         cmd = ["mafft", "--auto", "--quiet", gene_file]
+        # Handle timeout=0 as no timeout (None)
+        actual_timeout = None if timeout == 0 else timeout
         with open(output_file, 'w') as outf:
             result = subprocess.run(cmd, stdout=outf, stderr=subprocess.PIPE, 
-                                    text=True, timeout=300)
+                                    text=True, timeout=actual_timeout)
         
         if result.returncode == 0:
             # Verify alignment was created properly
@@ -57,9 +59,33 @@ def main():
                         help="Output directory for alignments")
     parser.add_argument("--threads", type=int, default=min(cpu_count()-1, 10),
                         help="Number of threads to use")
+    parser.add_argument("--timeout", type=int, default=None,
+                        help="Timeout for MAFFT in seconds (default: no timeout)")
     
     args = parser.parse_args()
     
+    # Check if MAFFT_TMPDIR is set (strict validation)
+    if "MAFFT_TMPDIR" not in os.environ:
+        print("❌ Error: MAFFT_TMPDIR environment variable is not set!")
+        print("   MAFFT may use /tmp which can cause disk space issues on HPC systems.")
+        print("   Please set it via: export MAFFT_TMPDIR=/vol/tmp")
+        print("   Run this script from the main pipeline which sets this automatically.")
+        return 1
+    
+    # Validate MAFFT_TMPDIR directory exists and is writable
+    mafft_tmpdir = os.environ["MAFFT_TMPDIR"]
+    if not os.path.exists(mafft_tmpdir):
+        print(f"❌ Error: MAFFT_TMPDIR directory does not exist: {mafft_tmpdir}")
+        print("   Please create the directory or set a different MAFFT_TMPDIR")
+        return 1
+    
+    if not os.access(mafft_tmpdir, os.W_OK):
+        print(f"❌ Error: MAFFT_TMPDIR is not writable: {mafft_tmpdir}")
+        print("   Please check permissions on the temporary directory")
+        return 1
+    
+    print(f"✅ MAFFT_TMPDIR validated: {mafft_tmpdir}")
+
     # Check if sequences directory exists
     if not os.path.exists(args.sequences_dir):
         print(f"Error: Sequences directory not found: {args.sequences_dir}")
@@ -82,10 +108,11 @@ def main():
     print(f"Input directory: {args.sequences_dir}")
     print(f"Output directory: {args.output_dir}")
     print(f"Threads: {args.threads}")
+    print(f"Timeout: {args.timeout or 'None'}")
     print(f"{'='*60}\n")
     
     # Prepare arguments for parallel processing
-    task_args = [(gene_file, args.output_dir) for gene_file in gene_files]
+    task_args = [(gene_file, args.output_dir, args.timeout) for gene_file in gene_files]
     
     # Process in parallel
     print("Creating alignments...")
