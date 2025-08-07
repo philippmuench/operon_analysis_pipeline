@@ -12,6 +12,7 @@ from Bio import AlignIO
 from Bio.Align import AlignInfo
 from collections import defaultdict, Counter
 import argparse
+import time
 from multiprocessing import Pool, cpu_count
 
 def calculate_conservation_metrics(alignment_file):
@@ -152,6 +153,10 @@ def main():
                         help="Output directory")
     parser.add_argument("--threads", type=int, default=None,
                         help="Number of threads to use (default: use SLURM_CPUS_PER_TASK if set, else all CPUs)")
+    parser.add_argument("--progress-every", type=int, default=50,
+                        help="Print progress every N genes (default: 50)")
+    parser.add_argument("--checkpoint-every", type=int, default=0,
+                        help="Write partial results every N genes (0 = disabled)")
     
     args = parser.parse_args()
     
@@ -171,8 +176,9 @@ def main():
     print(f"{'='*60}")
     print(f"Core Gene Conservation Analysis")
     print(f"{'='*60}")
+    total_genes = len(alignment_files)
     print(f"Alignments directory: {args.alignments_dir}")
-    print(f"Number of genes: {len(alignment_files)}")
+    print(f"Number of genes: {total_genes}")
     # Resolve threads: prefer CLI, then SLURM_CPUS_PER_TASK, else all CPUs
     if args.threads is None:
         try:
@@ -185,15 +191,55 @@ def main():
     print(f"Threads: {args.threads}")
     print(f"{'='*60}\n")
     
-    # Process alignments in parallel
-    print("Calculating conservation metrics...")
+    # Process alignments in parallel with progress logging
+    print("Calculating conservation metrics...", flush=True)
+    start_time = time.time()
+    results = []
+    failed_results = []
+    successful_results = []
+    processed = 0
+    next_report = args.progress_every
+    partial_file = None
+    if args.checkpoint_every and args.checkpoint_every > 0:
+        os.makedirs(args.output_dir, exist_ok=True)
+        partial_file = os.path.join(args.output_dir, 'core_gene_conservation_metrics.partial.csv')
+
+    # Use imap_unordered for smoother progress
     with Pool(args.threads) as pool:
-        results = pool.map(process_gene_alignment, alignment_files)
+        for res in pool.imap_unordered(process_gene_alignment, alignment_files, chunksize=5):
+            results.append(res)
+            processed += 1
+            if res.get('error') is None:
+                successful_results.append(res)
+            else:
+                failed_results.append(res)
+
+            # Periodic progress report
+            if processed >= next_report or processed == total_genes:
+                elapsed = time.time() - start_time
+                rate = processed / elapsed if elapsed > 0 else 0
+                remaining = total_genes - processed
+                eta_sec = remaining / rate if rate > 0 else 0
+                eta_min = int(eta_sec // 60)
+                eta_sec_rem = int(eta_sec % 60)
+                print(f"Progress: {processed}/{total_genes} (" \
+                      f"{processed/total_genes*100:.1f}%) | " \
+                      f"Elapsed: {int(elapsed//60)}m{int(elapsed%60)}s | " \
+                      f"ETA: {eta_min}m{eta_sec_rem}s | " \
+                      f"OK: {len(successful_results)} | Fail: {len(failed_results)}",
+                      flush=True)
+                next_report += args.progress_every
+
+                # Optional checkpoint write
+                if partial_file and (processed % args.checkpoint_every == 0 or processed == total_genes):
+                    try:
+                        pd.DataFrame([r for r in successful_results]).to_csv(partial_file, index=False)
+                        print(f"Checkpoint written: {partial_file} (rows: {len(successful_results)})", flush=True)
+                    except Exception as e:
+                        print(f"Warning: failed to write checkpoint: {e}", flush=True)
     
-    # Filter successful results
-    successful_results = [r for r in results if r.get('error') is None]
-    failed_results = [r for r in results if r.get('error') is not None]
-    
+    # Results already split during progress loop
+
     if failed_results:
         print(f"\n⚠️  Warning: {len(failed_results)} genes failed analysis:")
         for result in failed_results[:5]:  # Show first 5 errors
