@@ -24,6 +24,66 @@ def parse_blast_hit(blast_line):
         'qcovs': float(fields[12]) if len(fields) > 12 else 100.0
     }
 
+def _find_fna_file(prokka_dir: str, genome_id: str):
+    """Return path to the .fna file for a given genome_id, handling .result suffixes.
+
+    Tries common layouts produced by Prokka:
+    - {prokka_dir}/{genome_id}.result/{genome_id}.result.fna
+    - {prokka_dir}/{genome_id}.result/{genome_id}.fna
+    - {prokka_dir}/{genome_id}/{genome_id}.fna
+    - {prokka_dir}/{genome_id}.fna
+    - Any single *.fna inside the matched directory
+    """
+    # Candidate directories
+    candidate_dirs = [
+        os.path.join(prokka_dir, f"{genome_id}.result"),
+        os.path.join(prokka_dir, genome_id),
+    ]
+
+    # If there is exactly one dir that starts with genome_id and ends with .result, use it
+    try:
+        for entry in os.listdir(prokka_dir):
+            full = os.path.join(prokka_dir, entry)
+            if os.path.isdir(full) and entry.startswith(genome_id) and entry.endswith('.result'):
+                if full not in candidate_dirs:
+                    candidate_dirs.insert(0, full)
+    except FileNotFoundError:
+        pass
+
+    # Try each directory for expected files
+    for d in candidate_dirs:
+        if not os.path.isdir(d):
+            continue
+        dir_basename = os.path.basename(d)
+        fna_candidates = [
+            os.path.join(d, f"{dir_basename}.fna"),
+            os.path.join(d, f"{genome_id}.fna"),
+        ]
+        for cand in fna_candidates:
+            if os.path.exists(cand):
+                return cand
+        # Fallback: any single .fna in directory
+        try:
+            fna_files = [os.path.join(d, f) for f in os.listdir(d) if f.endswith('.fna')]
+            if len(fna_files) == 1:
+                return fna_files[0]
+            elif len(fna_files) > 1:
+                # Prefer one that contains genome_id
+                for f in fna_files:
+                    if genome_id in os.path.basename(f):
+                        return f
+                # Else return the first
+                return fna_files[0]
+        except FileNotFoundError:
+            pass
+
+    # As a last resort, look for a top-level file
+    top_level = os.path.join(prokka_dir, f"{genome_id}.fna")
+    if os.path.exists(top_level):
+        return top_level
+    return None
+
+
 def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90, min_coverage=80):
     """Extract operon gene sequences from genomes."""
     
@@ -78,11 +138,9 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
         if not all(gene in best_hits for gene in operon_genes):
             continue
         
-        # Load genome sequence
-        genome_dir = os.path.join(prokka_dir, genome_id)
-        fna_file = os.path.join(genome_dir, f"{genome_id}.fna")
-        
-        if not os.path.exists(fna_file):
+        # Load genome sequence (.result-aware)
+        fna_file = _find_fna_file(prokka_dir, genome_id)
+        if not fna_file:
             print(f"Warning: No .fna file for {genome_id}")
             continue
         
