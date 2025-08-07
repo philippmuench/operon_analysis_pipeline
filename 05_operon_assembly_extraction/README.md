@@ -77,6 +77,26 @@ Enhanced promoter plotting with Pribnow box annotation.
 
 ## Usage
 
+### SLURM (HPC) submission
+Submit the full step via SLURM (recommended on login nodes):
+
+```bash
+sbatch 05_operon_assembly_extraction/run_operon_extraction.sh
+```
+
+Override resources if needed (examples):
+
+```bash
+sbatch -c 32 --mem=48G --time=12:00:00 05_operon_assembly_extraction/run_operon_extraction.sh
+```
+
+Monitor job and logs:
+
+```bash
+squeue -j <JOBID>
+tail -f 05_operon_assembly_extraction/operon_extraction_<JOBID>.out
+```
+
 ### Complete Pipeline
 ```bash
 # Run full extraction and MSA pipeline
