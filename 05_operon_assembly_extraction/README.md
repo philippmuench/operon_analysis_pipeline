@@ -1,6 +1,6 @@
-# Step 5: Operon Sequence Extraction and MSA Creation
+# Step 5: Operon Assembly-based Extraction and MSA Creation
 
-This directory contains scripts for extracting operon gene sequences from BLAST results and creating multiple sequence alignments.
+This directory contains scripts for extracting operon gene and promoter sequences directly from assemblies using BLAST-derived coordinates, and for creating multiple sequence alignments for downstream analysis.
 
 ## Overview
 
@@ -10,7 +10,7 @@ This step processes BLAST search results to extract actual sequences for operon 
 
 - BLAST results from `../03_blast_search/output/`
 - Prokka annotations from `../01_prokka_annotation/output/prokka_results/`
-- Reference sequences from `../02_operon_extraction/output/`
+ - Reference sequences from `../02_reference_operon_extraction/output/`
 
 ## Output Files
 
@@ -50,11 +50,11 @@ Alternative extraction method that works directly from BLAST results.
 
 ### MSA Creation Scripts
 
-#### `create_enhanced_msa.py`
-Enhanced MSA creation with additional features.
-- Handles both coding and non-coding sequences
-- Parallel processing for efficiency
-- Quality control and validation
+#### `create_msa.py`
+Create MSAs for coding and non-coding sequences using MAFFT.
+ - Handles both coding and non-coding sequences
+ - Parallel processing for efficiency
+ - Quality control and validation
 
 #### `create_promoter_msa_from_blast.py`
 Specialized script for promoter sequence MSAs.
@@ -82,7 +82,7 @@ Enhanced promoter plotting with Pribnow box annotation.
 # Run full extraction and MSA pipeline
 python extract_operon_sequences.py
 python extract_noncoding_sequences.py
-python create_enhanced_msa.py
+python create_msa.py
 ```
 
 ### Individual Steps
@@ -94,7 +94,7 @@ python extract_operon_sequences.py --prokka-dir ../01_prokka_annotation/output/p
 python extract_noncoding_sequences.py
 
 # Step 3: Create MSAs for coding genes
-python create_enhanced_msa.py --sequences-dir output/sequences
+python create_msa.py --sequences-dir output/sequences
 ```
 
 ### Promoter Analysis

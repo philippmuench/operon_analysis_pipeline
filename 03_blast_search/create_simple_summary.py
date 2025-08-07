@@ -136,21 +136,16 @@ def create_simple_summary(blast_dir, output_dir, test_mode=False):
 
 def main():
     parser = argparse.ArgumentParser(description="Create simple operon summary")
-    parser.add_argument('--test', action='store_true', help='Test mode: process only first 50 genomes')
     args = parser.parse_args()
     
-    # Paths
-    if args.test:
-        blast_dir = 'output/blast_results'
-        output_dir = 'output'
-    else:
-        blast_dir = '../data/blast_results'
-        output_dir = '../results'
+    # Paths: read local BLAST results, write to core analysis outputs
+    blast_dir = 'output/blast_results'
+    output_dir = '../04_core_gene_analysis/output'
     
     os.makedirs(output_dir, exist_ok=True)
     
     # Create summary
-    summary_df = create_simple_summary(blast_dir, output_dir, test_mode=args.test)
+    summary_df = create_simple_summary(blast_dir, output_dir, test_mode=False)
 
 if __name__ == '__main__':
     main()

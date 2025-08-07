@@ -114,21 +114,17 @@ def summarize_operon_presence(results_df, identity_threshold=90, coverage_thresh
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Process BLAST results for operon analysis")
-    parser.add_argument('--test', action='store_true', help='Test mode: process only first 50 genomes')
     args = parser.parse_args()
     
-    # Paths
-    if args.test:
-        blast_dir = 'output/blast_results'
-        output_dir = 'output'
-    else:
-        blast_dir = '../data/blast_results'
-        output_dir = '../results'
+    # Paths: use in-repo structured locations
+    blast_dir = 'output/blast_results'
+    # Write summary to the core analysis output to keep results centralized
+    output_dir = '../04_core_gene_analysis/output'
     os.makedirs(output_dir, exist_ok=True)
     
     # Parse BLAST results
     print("Parsing BLAST results...")
-    results_df = parse_blast_results(blast_dir, test_mode=args.test)
+    results_df = parse_blast_results(blast_dir, test_mode=False)
     
     if results_df.empty:
         print("No BLAST results found!")

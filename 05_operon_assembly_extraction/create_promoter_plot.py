@@ -130,7 +130,7 @@ def main():
         print(f"Error: Alignment file {args.alignment} not found")
         print("\nMake sure you have run the promoter extraction and MSA creation steps:")
         print("  python extract_noncoding_sequences.py")
-        print("  python create_enhanced_msa.py --noncoding-only")
+        print("  python create_msa.py --noncoding-only")
         print("\nOr run the full enhanced pipeline:")
         print("  sbatch run_enhanced_diversity_analysis.sh")
         return 1

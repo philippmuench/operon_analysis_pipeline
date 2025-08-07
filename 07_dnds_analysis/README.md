@@ -1,4 +1,4 @@
-# Step 6: dN/dS and Substitution Analysis
+# Step 7: dN/dS and Substitution Analysis
 
 This directory contains scripts for analyzing selection pressure and substitution patterns in the operon genes.
 
@@ -13,8 +13,9 @@ This step performs specialized analysis of:
 ## Input Data
 
 Uses data from previous pipeline steps:
-- Multiple sequence alignments from `../05_diversity_analysis/output/msa/`
-- BLAST results from `../03_blast_search/output/`
+- Operon MSAs: `../05_operon_assembly_extraction/output/msa/dna_alignments/`
+- Core gene MSAs: `../04_core_gene_analysis/output/core_gene_alignments/`
+- BLAST results (optional context): `../03_blast_search/output/`
 
 ## Main Scripts
 
@@ -73,7 +74,8 @@ Results are typically saved to an `output/` directory within this folder:
 
 Before running these analyses, ensure you have completed:
 1. Step 3: BLAST search
-2. Step 5: Diversity analysis with MSA creation
+2. Step 5: Operon assembly-based extraction and MSA creation
+3. Step 4: Core gene analysis (including MSAs)
 
 ## Dependencies
 

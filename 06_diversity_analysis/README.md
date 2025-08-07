@@ -9,7 +9,7 @@ This step performs comprehensive diversity analysis using MSAs from both core ge
 ## Input Data
 
 - Core gene MSAs from `../04_core_gene_analysis/output/core_gene_alignments/`
-- Operon gene MSAs from `../05_operon_extraction/output/msa/`
+- Operon gene MSAs from `../05_operon_assembly_extraction/output/msa/`
 - BLAST results from `../03_blast_search/output/`
 
 ## Output Files
@@ -134,7 +134,7 @@ python analyze_msa_diversity.py --input msa_directory/ --output results/
 
 This step uses output from:
 - `../04_core_gene_analysis/`: Core gene MSAs and metrics
-- `../05_operon_extraction/`: Operon gene MSAs
+- `../05_operon_assembly_extraction/`: Operon gene MSAs
 
 This step provides input for:
 - `../07_dnds_analysis/`: dN/dS ratio calculations

@@ -36,29 +36,8 @@ def analyze_gene_substitutions(args):
     fasta_file, gene_type = args
     gene_name = os.path.basename(fasta_file).replace('.fasta', '').replace('_variants_aligned', '')
     
-    # Check if we need to align
-    if gene_type == 'core':
-        # For core genes, create a quick alignment
-        aligned_file = fasta_file.replace('.fasta', '_aligned.fasta')
-        if not os.path.exists(aligned_file):
-            # Subsample sequences if too many
-            sequences = list(SeqIO.parse(fasta_file, 'fasta'))
-            if len(sequences) > 50:
-                sequences = random.sample(sequences, 50)
-                temp_file = fasta_file.replace('.fasta', '_temp.fasta')
-                SeqIO.write(sequences, temp_file, 'fasta')
-                cmd = f"mafft --retree 1 --maxiterate 0 --quiet {temp_file} > {aligned_file} 2>/dev/null"
-                subprocess.run(cmd, shell=True)
-                os.remove(temp_file)
-            else:
-                cmd = f"mafft --retree 1 --maxiterate 0 --quiet {fasta_file} > {aligned_file} 2>/dev/null"
-                subprocess.run(cmd, shell=True)
-        
-        if not os.path.exists(aligned_file):
-            return None
-        msa_file = aligned_file
-    else:
-        msa_file = fasta_file
+    # Files are already aligned (Steps 04 and 05), use as-is
+    msa_file = fasta_file
     
     # Analyze alignment
     try:
@@ -125,11 +104,11 @@ def main():
     print("=== Comparing Substitutions: Operon vs Core Genes ===\n")
     
     # Get operon files
-    operon_files = glob.glob('msa_output/*_aligned.fasta')
+    operon_files = glob.glob('../05_operon_assembly_extraction/output/msa/dna_alignments/*_aligned.fasta')
     print(f"Found {len(operon_files)} operon gene alignments")
     
     # Get core gene files (sample 50)
-    all_core_files = glob.glob('core_gene_sequences_95pct/*.fasta')
+    all_core_files = glob.glob('../04_core_gene_analysis/output/core_gene_alignments/*_aligned.fasta')
     # Filter out very small files
     core_files = []
     for f in all_core_files:

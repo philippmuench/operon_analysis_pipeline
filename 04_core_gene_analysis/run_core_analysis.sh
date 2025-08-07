@@ -207,7 +207,7 @@ if [ $START_STEP -le 4 ] && [ -f "calculate_diversity.py" ]; then
     echo ""
     echo "Step 4: Calculating diversity metrics..."
     echo "========================================"
-    python calculate_diversity.py
+    python calculate_diversity.py --threads $SLURM_CPUS_PER_TASK
     
     if [ $? -eq 0 ]; then
         echo "✅ Diversity analysis complete"

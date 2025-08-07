@@ -97,7 +97,7 @@ def main():
     print("=== Analyzing Operon Gene Substitutions ===\n")
     
     # Get operon MSA files
-    msa_files = glob.glob('msa_output/*_aligned.fasta')
+    msa_files = glob.glob('../05_operon_assembly_extraction/output/msa/dna_alignments/*_aligned.fasta')
     print(f"Found {len(msa_files)} operon MSA files")
     
     results = []

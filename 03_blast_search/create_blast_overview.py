@@ -142,20 +142,15 @@ def create_overview(results_df, output_dir):
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser(description="Create overview of BLAST results")
-    parser.add_argument('--test', action='store_true', help='Test mode: process only first 50 genomes')
     args = parser.parse_args()
     
-    # Paths
-    if args.test:
-        blast_dir = 'output/blast_results'
-        output_dir = 'output'
-    else:
-        blast_dir = '../data/blast_results'
-        output_dir = '../results'
+    # Paths: use local BLAST results, write to core analysis outputs
+    blast_dir = 'output/blast_results'
+    output_dir = '../04_core_gene_analysis/output'
     
     # Parse all BLAST hits
     print("Parsing BLAST results...")
-    results_df = parse_all_blast_hits(blast_dir, test_mode=args.test)
+    results_df = parse_all_blast_hits(blast_dir, test_mode=False)
     
     if results_df.empty:
         print("No BLAST results found!")

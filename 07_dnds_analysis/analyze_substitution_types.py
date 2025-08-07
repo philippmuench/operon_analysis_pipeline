@@ -103,7 +103,12 @@ def main():
         operon_refs[gene_name] = record.seq
     
     # Analyze each operon MSA
-    for msa_file in glob.glob('msa_output/*.aln'):
+    for msa_file in glob.glob('../04_core_gene_analysis/output/core_gene_alignments/*_aligned.fasta'):
+        # Skip: this loop is for core genes; operon genes handled below if needed
+        break
+
+    # Analyze operon alignments from Step 05
+    for msa_file in glob.glob('../05_operon_assembly_extraction/output/msa/dna_alignments/*_aligned.fasta'):
         gene_name = os.path.basename(msa_file).replace('.aln', '')
         
         # Find matching reference
@@ -123,20 +128,13 @@ def main():
     core_results = {}
     
     # Sample some core gene alignments
-    core_gene_files = glob.glob('core_gene_sequences_95pct/*.fasta')[:50]  # Sample 50
+    core_gene_files = glob.glob('../04_core_gene_analysis/output/core_gene_alignments/*_aligned.fasta')[:50]  # Sample 50 alignments
     
     for fasta_file in core_gene_files:
         gene_name = os.path.basename(fasta_file).replace('.fasta', '')
         
-        # For core genes, we'll need to align them first
-        # Check if alignment exists
-        aligned_file = fasta_file.replace('.fasta', '.aln')
-        
-        if not os.path.exists(aligned_file):
-            # Run quick alignment
-            cmd = f"mafft --retree 1 --maxiterate 0 {fasta_file} > {aligned_file} 2>/dev/null"
-            os.system(cmd)
-        
+        # Files are already aligned in Step 04
+        aligned_file = fasta_file
         if os.path.exists(aligned_file):
             results = analyze_msa_substitutions(aligned_file)
             if results:

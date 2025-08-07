@@ -86,8 +86,7 @@ The main pipeline uses these individual scripts in sequence:
 ### Core Analysis Scripts
 - `extract_operon_sequences.py` - Extracts coding gene sequences
 - `extract_noncoding_sequences.py` - Extracts promoter sequences  
-- `create_msa.py` - Creates MSAs for coding sequences
-- `create_enhanced_msa.py` - Creates MSAs for non-coding sequences
+- `create_msa.py` - Creates MSAs for coding and non-coding sequences
 - `analyze_diversity.py` - Analyzes coding gene diversity
 - `analyze_enhanced_diversity.py` - Analyzes all sequence types
 - `create_gap_analysis.py` - Creates gap analysis plots
