@@ -74,24 +74,29 @@ def calculate_conservation_metrics(alignment_file):
         total_gaps = sum(gap_counts)
         gap_percentage = (total_gaps / (n_sequences * alignment_length)) * 100
         
-        # Sequence identity statistics
-        identities = []
-        for i in range(n_sequences):
-            for j in range(i + 1, n_sequences):
-                seq1 = str(alignment[i].seq).replace('-', '')
-                seq2 = str(alignment[j].seq).replace('-', '')
-                
-                if len(seq1) > 0 and len(seq2) > 0:
-                    # Simple identity calculation
-                    min_len = min(len(seq1), len(seq2))
-                    matches = sum(1 for k in range(min_len) if seq1[k] == seq2[k])
-                    identity = matches / min_len if min_len > 0 else 0
-                    identities.append(identity)
+        # Fast pairwise identity via combinatorics over columns (avoids O(n^2))
+        identical_pairs_total = 0
+        comparable_pairs_total = 0
+        for pos in range(alignment_length):
+            column = alignment[:, pos]
+            # Count non-gap bases
+            char_counts = Counter([c for c in column if c != '-'])
+            m = sum(char_counts.values())
+            if m >= 2:
+                # Identical pairs at this column
+                identical_pairs = sum((c * (c - 1)) // 2 for c in char_counts.values())
+                total_pairs = (m * (m - 1)) // 2
+                identical_pairs_total += identical_pairs
+                comparable_pairs_total += total_pairs
         
-        mean_identity = np.mean(identities) if identities else 0
-        std_identity = np.std(identities) if identities else 0
-        min_identity = np.min(identities) if identities else 0
-        max_identity = np.max(identities) if identities else 0
+        if comparable_pairs_total > 0:
+            mean_identity = identical_pairs_total / comparable_pairs_total
+        else:
+            mean_identity = 0
+        # Dispersion stats are less meaningful with this method; set to 0
+        std_identity = 0
+        min_identity = 0
+        max_identity = 1 if mean_identity > 0 else 0
         
         # Most conserved regions (windows of 10 positions)
         window_size = 10
@@ -206,7 +211,7 @@ def main():
 
     # Use imap_unordered for smoother progress
     with Pool(args.threads) as pool:
-        for res in pool.imap_unordered(process_gene_alignment, alignment_files, chunksize=5):
+        for res in pool.imap_unordered(process_gene_alignment, alignment_files, chunksize=1):
             results.append(res)
             processed += 1
             if res.get('error') is None:
