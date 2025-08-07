@@ -1,16 +1,17 @@
 # Operon Analysis Pipeline
 
-A bioinformatics pipeline for analyzing sequence diversity in the fructoselysine/glucoselysine operon across Enterococcus faecalis genomes.
+A bioinformatics pipeline for analyzing sequence diversity in the fructoselysine/glucoselysine operon across <em>Enterococcus faecalis</em> genomes.
 
 ## Overview
 
-This pipeline processes E. faecalis genome assemblies to:
+This pipeline processes <em>E. faecalis</em> genome assemblies to:
 1. Annotate genomes with Prokka
-2. Extract operon gene sequences from reference
+2. Extract reference operon genes from GenBank
 3. Search for operon genes across all genomes using BLAST
-4. Identify core genes for comparison
-5. Calculate sequence diversity metrics
-6. Generate publication-ready visualizations
+4. Identify and analyze core genes for comparison
+5. Extract operon sequences from assemblies and create MSAs
+6. Run diversity analyses and generate plots
+7. Run dN/dS and substitution analyses
 
 ## Quick Start
 
@@ -29,20 +30,32 @@ conda activate efs_diversity
 cd 01_prokka_annotation
 sbatch run_prokka.sh --test
 
-# 2. Extract operon genes from reference
-cd ../02_operon_extraction
+# 2. Extract operon genes from reference GenBank
+cd ../02_reference_operon_extraction
 python extract_operon_genes.py
 
 # 3. Search for operon genes via BLAST
 cd ../03_blast_search
-sbatch run_blast_search.sh --test
-python process_blast_results.py --test
-python create_blast_overview.py --test
-python create_simple_summary.py --test
+sbatch run_blast_search.sh
+python process_blast_results.py
+python create_blast_overview.py
+python create_simple_summary.py
 
 # 4. Identify core genes
 cd ../04_core_gene_analysis
-python identify_core_genes.py
+sbatch run_core_analysis.sh
+
+# 5. Extract operon sequences from assemblies and create MSAs
+cd ../05_operon_assembly_extraction
+sbatch run_operon_extraction.sh
+
+# 6. Diversity analysis
+cd ../06_diversity_analysis
+sbatch run_complete_diversity_analysis.sh
+
+# 7. dN/dS and substitution analyses
+cd ../07_dnds_analysis
+sbatch run_dnds_analysis.sh
 ```
 
 ### Full Run (8,587 genomes)
@@ -53,14 +66,15 @@ Remove the `--test` flag from the commands above to process all genomes.
 
 ```
 operon_analysis/
-├── 01_prokka_annotation/    # Genome annotation with Prokka
-├── 02_operon_extraction/    # Extract reference operon genes
-├── 03_blast_search/         # Search for operon genes via BLAST
-├── 04_core_gene_analysis/   # Identify and analyze core genes
-├── 05_diversity_analysis/   # Calculate diversity metrics (TODO)
-├── 06_visualization/        # Create figures (TODO)
-├── environment.yml          # Conda environment specification
-└── run_pipeline.sh          # Master pipeline script
+├── 01_prokka_annotation/           # Genome annotation with Prokka
+├── 02_reference_operon_extraction/ # Extract reference operon genes from GenBank
+├── 03_blast_search/                # Search for operon genes via BLAST
+├── 04_core_gene_analysis/          # Identify and analyze core genes; create core MSAs
+├── 05_operon_assembly_extraction/  # Extract operon sequences from assemblies; create MSAs
+├── 06_diversity_analysis/          # Diversity metrics and plots (operon and core)
+├── 07_dnds_analysis/               # dN/dS and substitution analyses
+├── environment.yml                 # Conda environment specification
+└── run_pipeline.sh                 # Master pipeline script
 ```
 
 ## Key Features
@@ -111,7 +125,7 @@ Plus regulatory elements:
 ## Data Requirements
 
 - Input genomes: `../Efs_assemblies/*.fasta.gz`
-- Reference operon: `02_operon_extraction/operon.gb`
+- Reference operon: `02_reference_operon_extraction/operon.gb`
 
 ## Citation
 

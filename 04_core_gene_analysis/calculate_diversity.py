@@ -150,8 +150,8 @@ def main():
                         help="Directory containing gene alignments")
     parser.add_argument("--output-dir", default="output",
                         help="Output directory")
-    parser.add_argument("--threads", type=int, default=min(cpu_count()-1, 10),
-                        help="Number of threads to use")
+    parser.add_argument("--threads", type=int, default=None,
+                        help="Number of threads to use (default: use SLURM_CPUS_PER_TASK if set, else all CPUs)")
     
     args = parser.parse_args()
     
@@ -173,6 +173,15 @@ def main():
     print(f"{'='*60}")
     print(f"Alignments directory: {args.alignments_dir}")
     print(f"Number of genes: {len(alignment_files)}")
+    # Resolve threads: prefer CLI, then SLURM_CPUS_PER_TASK, else all CPUs
+    if args.threads is None:
+        try:
+            from os import environ
+            slurm_threads = int(environ.get("SLURM_CPUS_PER_TASK", "0"))
+        except ValueError:
+            slurm_threads = 0
+        args.threads = slurm_threads if slurm_threads > 0 else cpu_count()
+
     print(f"Threads: {args.threads}")
     print(f"{'='*60}\n")
     

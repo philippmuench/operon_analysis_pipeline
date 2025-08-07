@@ -46,13 +46,9 @@ cd $BASE_DIR
 
 # Step 2: Extract operon genes
 echo -e "\n[Step 2] Extracting operon genes..."
-cd 02_operon_extraction
+cd 02_reference_operon_extraction
 
-if [ ! -f ../data/operon_genes.fasta ]; then
-    python extract_operon_genes.py
-else
-    echo "Operon genes already extracted"
-fi
+python extract_operon_genes.py
 
 cd $BASE_DIR
 
@@ -60,21 +56,17 @@ cd $BASE_DIR
 echo -e "\n[Step 3] Running BLAST search..."
 cd 03_blast_search
 
-if [ ! -f ../results/operon_presence_summary.csv ]; then
-    echo "Submitting BLAST jobs..."
-    BLAST_JOB=$(sbatch --parsable run_blast_search.sh)
-    echo "BLAST job: $BLAST_JOB"
-    
-    # Wait for completion
-    while squeue -j $BLAST_JOB 2>/dev/null | grep -q $BLAST_JOB; do
-        sleep 300
-    done
-    
-    echo "Processing BLAST results..."
-    python process_blast_results.py
-else
-    echo "BLAST search already complete"
-fi
+echo "Submitting BLAST jobs..."
+BLAST_JOB=$(sbatch --parsable run_blast_search.sh)
+echo "BLAST job: $BLAST_JOB"
+
+# Wait for completion
+while squeue -j $BLAST_JOB 2>/dev/null | grep -q $BLAST_JOB; do
+    sleep 300
+done
+
+echo "Processing BLAST results..."
+python process_blast_results.py
 
 cd $BASE_DIR
 
@@ -82,51 +74,51 @@ cd $BASE_DIR
 echo -e "\n[Step 4] Analyzing core genes..."
 cd 04_core_gene_analysis
 
-if [ ! -f ../data/core_genes_95pct.txt ]; then
-    python identify_core_genes.py
-fi
+echo "Submitting core gene analysis..."
+CORE_JOB=$(sbatch --parsable run_core_analysis.sh)
+echo "Core analysis job: $CORE_JOB"
 
-if [ ! -f ../results/core_gene_diversity.csv ]; then
-    echo "Submitting core gene analysis..."
-    CORE_JOB=$(sbatch --parsable run_core_analysis.sh)
-    echo "Core analysis job: $CORE_JOB"
-    
-    while squeue -j $CORE_JOB 2>/dev/null | grep -q $CORE_JOB; do
-        sleep 300
-    done
-fi
+while squeue -j $CORE_JOB 2>/dev/null | grep -q $CORE_JOB; do
+    sleep 300
+done
 
 cd $BASE_DIR
 
-# Step 5: Diversity analysis
-echo -e "\n[Step 5] Running diversity analysis..."
-cd 05_diversity_analysis
-
-if [ ! -f ../results/substitution_analysis.csv ]; then
-    echo "Submitting diversity analysis..."
-    DIV_JOB=$(sbatch --parsable run_diversity_analysis.sh)
-    echo "Diversity job: $DIV_JOB"
-    
-    while squeue -j $DIV_JOB 2>/dev/null | grep -q $DIV_JOB; do
-        sleep 300
-    done
-fi
+echo -e "\n[Step 5] Operon assembly-based extraction and MSAs..."
+cd 05_operon_assembly_extraction
+OP_JOB=$(sbatch --parsable run_operon_extraction.sh)
+echo "Operon extraction job: $OP_JOB"
+while squeue -j $OP_JOB 2>/dev/null | grep -q $OP_JOB; do
+    sleep 300
+done
 
 cd $BASE_DIR
 
-# Step 6: Generate visualizations
-echo -e "\n[Step 6] Generating visualizations..."
-cd 06_visualization
-
-python create_all_figures.py
+echo -e "\n[Step 6] Diversity analysis..."
+cd 06_diversity_analysis
+DIV_JOB=$(sbatch --parsable run_complete_diversity_analysis.sh)
+echo "Diversity job: $DIV_JOB"
+while squeue -j $DIV_JOB 2>/dev/null | grep -q $DIV_JOB; do
+    sleep 300
+done
 
 cd $BASE_DIR
+
+echo -e "\n[Step 7] dN/dS analysis..."
+cd 07_dnds_analysis
+DNDS_JOB=$(sbatch --parsable run_dnds_analysis.sh)
+echo "dN/dS job: $DNDS_JOB"
+while squeue -j $DNDS_JOB 2>/dev/null | grep -q $DNDS_JOB; do
+    sleep 300
+done
 
 echo -e "\n========================================="
 echo "Pipeline completed: $(date)"
 echo "========================================="
 echo "Results available in:"
-echo "  - results/operon_presence_summary.csv"
-echo "  - results/core_gene_diversity.csv"
-echo "  - results/figures/"
+echo "  - 03_blast_search/output/operon_presence_summary.csv"
+echo "  - 04_core_gene_analysis/output/gene_prevalence_stats.csv"
+echo "  - 05_operon_assembly_extraction/output/"
+echo "  - 06_diversity_analysis/output/"
+echo "  - 07_dnds_analysis/output/"
 echo "========================================="
