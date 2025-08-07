@@ -5,6 +5,8 @@ Uses BLAST results to find and extract sequences.
 """
 
 import os
+import sys
+import time
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -107,10 +109,20 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
     gene_sequences = defaultdict(list)
     
     # Process each genome
-    blast_files = [f for f in os.listdir(blast_results_dir) if f.endswith('_genes_blast.txt')]
+    blast_files = sorted([f for f in os.listdir(blast_results_dir) if f.endswith('_genes_blast.txt')])
+    total_genomes = len(blast_files)
+    print(f"Found {total_genomes} genomes with *_genes_blast.txt in {blast_results_dir}")
+    sys.stdout.flush()
     
-    for blast_file in blast_files:
+    start_time = time.time()
+    for index, blast_file in enumerate(blast_files, start=1):
         genome_id = blast_file.replace('_genes_blast.txt', '')
+        if index == 1 or index % 25 == 0 or index == total_genomes:
+            elapsed = time.time() - start_time
+            rate = index / elapsed if elapsed > 0 else 0
+            remaining = (total_genomes - index) / rate if rate > 0 else 0
+            print(f"[{index}/{total_genomes}] Processing {genome_id} (elapsed {elapsed/60:.1f}m, ETA {remaining/60:.1f}m)")
+            sys.stdout.flush()
         
         # Skip if not a complete genome (if we have the info)
         if complete_genomes and genome_id not in complete_genomes:
@@ -133,6 +145,8 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
                     # Keep best hit per gene
                     if gene_name not in best_hits or hit['pident'] > best_hits[gene_name]['pident']:
                         best_hits[gene_name] = hit
+        print(f"  {genome_id}: candidate genes passing filters: {len(best_hits)}/{len(operon_genes)}")
+        sys.stdout.flush()
         
         # Check if we have all operon genes
         if not all(gene in best_hits for gene in operon_genes):
@@ -143,6 +157,9 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
         if not fna_file:
             print(f"Warning: No .fna file for {genome_id}")
             continue
+        else:
+            print(f"  Using genome FASTA: {fna_file}")
+            sys.stdout.flush()
         
         # Extract sequences
         sequences = {}
@@ -166,12 +183,16 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
                     sequences[gene] = seq
         
         # Add sequences to collection
+        added_this_genome = 0
         for gene in operon_genes:
             if gene in sequences:
                 gene_sequences[gene].append({
                     'genome_id': genome_id,
                     'sequence': str(sequences[gene])
                 })
+                added_this_genome += 1
+        print(f"  Extracted {added_this_genome}/{len(operon_genes)} operon genes for {genome_id}")
+        sys.stdout.flush()
     
     # Write sequences to files
     for gene, seqs in gene_sequences.items():
@@ -180,6 +201,7 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
             for seq_info in seqs:
                 f.write(f">{seq_info['genome_id']}\n{seq_info['sequence']}\n")
         print(f"Wrote {len(seqs)} sequences for {gene} to {output_file}")
+        sys.stdout.flush()
     
     # Create summary
     summary = {

@@ -5,6 +5,8 @@ Uses BLAST results to find and extract promoter sequences.
 """
 
 import os
+import sys
+import time
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -48,10 +50,20 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
     noncoding_sequences = defaultdict(list)
     
     # Process each genome
-    blast_files = [f for f in os.listdir(blast_results_dir) if f.endswith('_noncoding_blast.txt')]
+    blast_files = sorted([f for f in os.listdir(blast_results_dir) if f.endswith('_noncoding_blast.txt')])
+    total_genomes = len(blast_files)
+    print(f"Found {total_genomes} genomes with *_noncoding_blast.txt in {blast_results_dir}")
+    sys.stdout.flush()
     
-    for blast_file in blast_files:
+    start_time = time.time()
+    for index, blast_file in enumerate(blast_files, start=1):
         genome_id = blast_file.replace('_noncoding_blast.txt', '')
+        if index == 1 or index % 25 == 0 or index == total_genomes:
+            elapsed = time.time() - start_time
+            rate = index / elapsed if elapsed > 0 else 0
+            remaining = (total_genomes - index) / rate if rate > 0 else 0
+            print(f"[{index}/{total_genomes}] Processing {genome_id} (elapsed {elapsed/60:.1f}m, ETA {remaining/60:.1f}m)")
+            sys.stdout.flush()
         
         # Skip if not a genome with promoter (if we have the info)
         if promoter_genomes and genome_id not in promoter_genomes:
@@ -96,6 +108,9 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
         if not genome_file:
             print(f"Warning: Genome file not found for {genome_id}")
             continue
+        else:
+            print(f"  Using genome FASTA: {genome_file}")
+            sys.stdout.flush()
         
         # Read genome sequences
         genome_seqs = {}
@@ -203,6 +218,8 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
                 
                 if not seq_found:
                     print(f"Warning: Could not find sequence for {element} in {genome_id}")
+        print(f"  Extracted promoter for {genome_id}: {1 if 'promoter' in best_hits and seq_found else 0}")
+        sys.stdout.flush()
     
     # Write sequences to files
     for element in noncoding_elements:
