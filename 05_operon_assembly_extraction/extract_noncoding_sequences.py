@@ -11,6 +11,7 @@ import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from collections import defaultdict
+import re
 import argparse
 from extract_operon_sequences import _find_fna_file
 
@@ -112,43 +113,42 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
             if element in best_hits:
                 hit = best_hits[element]
                 
-                # Find sequence with improved ID matching
+                # Find sequence with strict ID matching (no substring matches)
                 seq_found = False
                 
-                # Extract core ID from BLAST hit (remove gnl|X| prefix and get base name)
-                blast_id = hit['sseqid']
-                blast_core = None
-                if 'gnl|X|' in blast_id:
-                    blast_core = blast_id.split('gnl|X|')[1]
-                    # Get the base name without suffix numbers
-                    if '_' in blast_core:
-                        blast_base = '_'.join(blast_core.split('_')[:-1])
-                    else:
-                        blast_base = blast_core.rstrip('0123456789')
-                else:
-                    blast_base = blast_id
+                # Helpers for normalization and comparison
+                def first_token(s: str) -> str:
+                    return s.split()[0]
+
+                def strip_gnl_prefix(s: str) -> str:
+                    if s.startswith('gnl|') and s.count('|') >= 2:
+                        # Keep the part after the second '|'
+                        return s.split('|', 2)[2]
+                    return s
+
+                def strip_version(s: str) -> str:
+                    # Remove trailing .number version (e.g., ".1")
+                    return re.sub(r"\.\d+$", "", s)
+
+                def normalize_variants(s: str):
+                    raw = first_token(s)
+                    no_prefix = strip_gnl_prefix(raw)
+                    no_version_raw = strip_version(raw)
+                    no_version_no_prefix = strip_version(no_prefix)
+                    return {
+                        raw,
+                        no_prefix,
+                        no_version_raw,
+                        no_version_no_prefix,
+                    }
+
+                blast_variants = normalize_variants(hit['sseqid'])
                 
                 for seq_id, seq in genome_seqs.items():
-                    # Try multiple matching strategies
-                    match_found = False
-                    
-                    # Strategy 1: Direct substring match (original)
-                    if hit['sseqid'] in seq_id or seq_id in hit['sseqid']:
-                        match_found = True
-                    
-                    # Strategy 2: Core ID matching
-                    elif blast_core is not None and (blast_core in seq_id or seq_id in blast_core):
-                        match_found = True
-                    
-                    # Strategy 3: Base name matching (handles BEOEMDHG_1 vs BEOEMDHG_15)
-                    elif blast_base in seq_id:
-                        match_found = True
-                    
-                    # Strategy 4: Just use the first/longest sequence if no match
-                    # (many assemblies have single contigs)
-                    
+                    seq_variants = normalize_variants(seq_id)
+                    match_found = not blast_variants.isdisjoint(seq_variants)
                     if match_found:
-                        print(f"  Found sequence match: {hit['sseqid']} -> {seq_id}")
+                        print(f"  Found exact/normalized match: {hit['sseqid']} == {seq_id}")
                         
                         # Extract sequence with bounds checking
                         start = min(hit['sstart'], hit['send']) - 1  # Convert to 0-based
