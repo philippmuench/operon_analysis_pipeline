@@ -90,12 +90,18 @@ if [ $START_STEP -le 1 ]; then
     echo ""
     echo "Step 1: Extracting operon gene sequences from assemblies..."
     echo "==========================================================="
+    # Choose unified genome source for both gene and promoter extraction
+    GENOME_SOURCE=${GENOME_SOURCE:-prokka}
+    ASSEMBLIES_DIR=${ASSEMBLIES_DIR:-../Efs_assemblies}
+
     python extract_operon_sequences.py \
         --prokka_dir ../01_prokka_annotation/output/prokka_results \
         --blast_dir ../03_blast_search/output/blast_results \
         --output_dir output/sequences \
         --min_identity 90 \
-        --min_coverage 80
+        --min_coverage 80 \
+        --source "$GENOME_SOURCE" \
+        --assemblies_dir "$ASSEMBLIES_DIR"
 
     if [ $? -ne 0 ]; then
         echo "❌ Error: Real sequence extraction failed"
@@ -136,9 +142,8 @@ if [ $START_STEP -le 3 ]; then
     echo ""
     echo "Step 3: Extracting promoter sequences from assemblies..."
     echo "======================================================="
-    # Choose genome source for promoter extraction here: 'prokka' or 'assemblies'
-    PROMOTER_SOURCE=${PROMOTER_SOURCE:-prokka}
-    ASSEMBLIES_DIR=${ASSEMBLIES_DIR:-../Efs_assemblies}
+    # Use the same unified source as Step 1 unless overridden
+    PROMOTER_SOURCE=${PROMOTER_SOURCE:-$GENOME_SOURCE}
 
     python extract_noncoding_sequences.py \
         --blast-dir ../03_blast_search/output/blast_results \

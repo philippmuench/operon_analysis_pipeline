@@ -7,6 +7,7 @@ Uses BLAST results to find and extract sequences.
 import os
 import sys
 import time
+import gzip
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -86,7 +87,38 @@ def _find_fna_file(prokka_dir: str, genome_id: str):
     return None
 
 
-def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90, min_coverage=80):
+def _find_assembly_fasta(assemblies_dir: str, genome_id: str):
+    """Return path to the raw assembly FASTA for a given genome_id.
+
+    Tries exact filenames only:
+    - {assemblies_dir}/{genome_id}.result.fasta.gz
+    - {assemblies_dir}/{genome_id}.result.fasta
+    """
+    if not assemblies_dir:
+        return None
+    candidates = [
+        os.path.join(assemblies_dir, f"{genome_id}.result.fasta.gz"),
+        os.path.join(assemblies_dir, f"{genome_id}.result.fasta"),
+    ]
+    for cand in candidates:
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+def _read_genome_sequences(genome_file: str):
+    """Read sequences from a FASTA file (supports .gz) and return id->record mapping."""
+    sequences = {}
+    handle = gzip.open(genome_file, 'rt') if genome_file.endswith('.gz') else open(genome_file, 'r')
+    try:
+        for record in SeqIO.parse(handle, "fasta"):
+            sequences[record.id] = record
+    finally:
+        handle.close()
+    return sequences
+
+
+def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90, min_coverage=80, source="prokka", assemblies_dir=None):
     """Extract operon gene sequences from genomes."""
     
     # Create output directory
@@ -152,35 +184,40 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
         if not all(gene in best_hits for gene in operon_genes):
             continue
         
-        # Load genome sequence (.result-aware)
-        fna_file = _find_fna_file(prokka_dir, genome_id)
-        if not fna_file:
-            print(f"Warning: No .fna file for {genome_id}")
+        # Load genome sequence from requested source (no cross-source fallback)
+        if source == "prokka":
+            genome_file = _find_fna_file(prokka_dir, genome_id)
+        elif source == "assemblies":
+            genome_file = _find_assembly_fasta(assemblies_dir, genome_id)
+        else:
+            genome_file = None
+
+        if not genome_file:
+            print(f"Warning: Genome file not found for {genome_id} (source={source})")
             continue
         else:
-            print(f"  Using genome FASTA: {fna_file}")
+            print(f"  Using genome FASTA: {genome_file}")
             sys.stdout.flush()
         
         # Extract sequences
         sequences = {}
-        for record in SeqIO.parse(fna_file, "fasta"):
-            for gene, hit in best_hits.items():
-                if gene not in operon_genes:
-                    continue
-                    
-                if hit['sseqid'] == record.id:
-                    # Extract sequence based on coordinates
-                    start = min(hit['sstart'], hit['send']) - 1
-                    end = max(hit['sstart'], hit['send'])
-                    
-                    if hit['sstart'] > hit['send']:
-                        # Reverse strand
-                        seq = record.seq[start:end].reverse_complement()
-                    else:
-                        # Forward strand
-                        seq = record.seq[start:end]
-                    
-                    sequences[gene] = seq
+        records_by_id = _read_genome_sequences(genome_file)
+        for gene, hit in best_hits.items():
+            if gene not in operon_genes:
+                continue
+            record = records_by_id.get(hit['sseqid'])
+            if record is None:
+                continue
+            # Extract sequence based on coordinates
+            start = min(hit['sstart'], hit['send']) - 1
+            end = max(hit['sstart'], hit['send'])
+
+            if hit['sstart'] > hit['send']:
+                seq = record.seq[start:end].reverse_complement()
+            else:
+                seq = record.seq[start:end]
+
+            sequences[gene] = seq
         
         # Add sequences to collection
         added_this_genome = 0
@@ -225,6 +262,10 @@ def main():
                         help='Minimum identity threshold')
     parser.add_argument('--min_coverage', type=float, default=80,
                         help='Minimum coverage threshold')
+    parser.add_argument('--source', choices=['prokka', 'assemblies'], default='prokka',
+                        help="Choose genome source: 'prokka' for Prokka .fna, 'assemblies' for raw assemblies")
+    parser.add_argument('--assemblies_dir', default='../Efs_assemblies',
+                        help='Directory containing raw assemblies when --source=assemblies')
     
     args = parser.parse_args()
     
@@ -234,7 +275,9 @@ def main():
         args.blast_dir,
         args.output_dir,
         args.min_identity,
-        args.min_coverage
+        args.min_coverage,
+        args.source,
+        args.assemblies_dir,
     )
     
     print(f"\nExtraction complete:")
