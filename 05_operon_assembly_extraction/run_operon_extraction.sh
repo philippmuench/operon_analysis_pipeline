@@ -12,10 +12,66 @@
 # Complete pipeline for extracting operon sequences from BLAST results
 # and creating MSAs for both coding genes and non-coding regions
 
+# Parse command line arguments
+START_STEP=1
+HELP=false
+
+usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Operon Sequence Extraction Pipeline"
+    echo ""
+    echo "Options:"
+    echo "  --start-step STEP    Start pipeline from specific step (1-5, default: 1)"
+    echo "  --help               Show this help message"
+    echo ""
+    echo "Available steps:"
+    echo "  1. Extract operon gene sequences from assemblies"
+    echo "  2. Create MSAs from gene sequences (DNA & protein)"
+    echo "  3. Extract promoter sequences and create promoter MSA"
+    echo "  4. Create conservation plots (genes and enhanced promoter plots)"
+    echo "  5. BLAST-based diversity analysis (supplementary) and summary"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Run complete pipeline"
+    echo "  $0 --start-step 3     # Start from promoter extraction and MSA"
+}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --start-step)
+            START_STEP="$2"
+            shift 2
+            ;;
+        --help)
+            HELP=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$HELP" = true ]; then
+    usage
+    exit 0
+fi
+
+# Validate start step
+if ! [[ "$START_STEP" =~ ^[1-5]$ ]]; then
+    echo "❌ Error: Invalid start step '$START_STEP'. Must be 1-5."
+    usage
+    exit 1
+fi
+
 echo "=================================================="
 echo "Operon Sequence Extraction Pipeline"
 echo "Started: $(date)"
 echo "Job ID: $SLURM_JOB_ID"
+echo "Starting from step: $START_STEP"
 echo "=================================================="
 
 # Change to script directory
@@ -29,117 +85,138 @@ mkdir -p output/{sequences,msa,noncoding_sequences,plots}
 mkdir -p output/msa/{dna_alignments,protein_alignments,noncoding_alignments}
 echo "✅ Output directories created"
 
-# Step 1: Extract REAL gene sequences from assemblies
-echo ""
-echo "Step 1: Extracting operon gene sequences from assemblies..."
-echo "==========================================================="
-python extract_operon_sequences.py \
-    --prokka_dir ../01_prokka_annotation/output/prokka_results \
-    --blast_dir ../03_blast_search/output/blast_results \
-    --output_dir output/sequences \
-    --min_identity 90 \
-    --min_coverage 80
-
-if [ $? -ne 0 ]; then
-    echo "❌ Error: Real sequence extraction failed"
-    exit 1
-fi
-
-# Check if sequences were extracted  
-GENE_FASTA_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
-echo "✅ Real sequence extraction completed ($GENE_FASTA_COUNT gene files)"
-
-# Step 2: Create MSAs from real gene sequences
-echo ""
-echo "Step 2: Creating Multiple Sequence Alignments..."
-echo "================================================"
-python create_msa.py \
-    --coding-sequences output/sequences \
-    --output-dir output/msa \
-    --threads ${SLURM_CPUS_PER_TASK:-8}
-
-if [ $? -eq 0 ]; then
-    DNA_MSA_COUNT=$(find output/msa/dna_alignments -name "*.fasta" 2>/dev/null | wc -l)
-    echo "✅ MSA creation completed ($DNA_MSA_COUNT DNA alignments)"
-    MSA_RESULTS=1
-else
-    echo "⚠️  Warning: MSA creation failed"
-    MSA_RESULTS=0
-fi
-
-# Step 3: Extract promoter sequences and create MSA
-echo ""
-echo "Step 3: Extracting promoter sequences from assemblies..."
-echo "======================================================="
-python extract_noncoding_sequences.py \
-    --blast-dir ../03_blast_search/output/blast_results \
-    --output-dir output/noncoding_sequences \
-    --min-identity 70
-
-if [ $? -eq 0 ]; then
-    echo "✅ Promoter sequences extracted"
-    
-    # Create promoter MSA
+########## Step 1 ##########
+if [ $START_STEP -le 1 ]; then
     echo ""
-    echo "Step 3b: Creating promoter MSA..."
-    echo "================================="
+    echo "Step 1: Extracting operon gene sequences from assemblies..."
+    echo "==========================================================="
+    python extract_operon_sequences.py \
+        --prokka_dir ../01_prokka_annotation/output/prokka_results \
+        --blast_dir ../03_blast_search/output/blast_results \
+        --output_dir output/sequences \
+        --min_identity 90 \
+        --min_coverage 80
+
+    if [ $? -ne 0 ]; then
+        echo "❌ Error: Real sequence extraction failed"
+        exit 1
+    fi
+
+    # Check if sequences were extracted
+    GENE_FASTA_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
+    echo "✅ Real sequence extraction completed ($GENE_FASTA_COUNT gene files)"
+else
+    echo "⏭️  Skipping Step 1: Gene sequence extraction"
+fi
+
+########## Step 2 ##########
+if [ $START_STEP -le 2 ]; then
+    echo ""
+    echo "Step 2: Creating Multiple Sequence Alignments..."
+    echo "================================================"
     python create_msa.py \
-        --noncoding-sequences output/noncoding_sequences \
+        --coding-sequences output/sequences \
         --output-dir output/msa \
-        --noncoding-only \
         --threads ${SLURM_CPUS_PER_TASK:-8}
-    
+
     if [ $? -eq 0 ]; then
-        PROMOTER_MSA_COUNT=$(find output/msa/noncoding_alignments -name "*.fasta" 2>/dev/null | wc -l)
-        echo "✅ Promoter MSA created ($PROMOTER_MSA_COUNT files)"
-        PROMOTER_RESULTS=1
+        DNA_MSA_COUNT=$(find output/msa/dna_alignments -name "*.fasta" 2>/dev/null | wc -l)
+        echo "✅ MSA creation completed ($DNA_MSA_COUNT DNA alignments)"
+        MSA_RESULTS=1
     else
-        echo "⚠️  Warning: Promoter MSA creation failed"
+        echo "⚠️  Warning: MSA creation failed"
+        MSA_RESULTS=0
+    fi
+else
+    echo "⏭️  Skipping Step 2: MSA creation for genes"
+fi
+
+########## Step 3 ##########
+if [ $START_STEP -le 3 ]; then
+    echo ""
+    echo "Step 3: Extracting promoter sequences from assemblies..."
+    echo "======================================================="
+    python extract_noncoding_sequences.py \
+        --blast-dir ../03_blast_search/output/blast_results \
+        --output-dir output/noncoding_sequences \
+        --min-identity 70
+
+    if [ $? -eq 0 ]; then
+        echo "✅ Promoter sequences extracted"
+        
+        # Create promoter MSA
+        echo ""
+        echo "Step 3b: Creating promoter MSA..."
+        echo "================================="
+        python create_msa.py \
+            --noncoding-sequences output/noncoding_sequences \
+            --output-dir output/msa \
+            --noncoding-only \
+            --threads ${SLURM_CPUS_PER_TASK:-8}
+        
+        if [ $? -eq 0 ]; then
+            PROMOTER_MSA_COUNT=$(find output/msa/noncoding_alignments -name "*.fasta" 2>/dev/null | wc -l)
+            echo "✅ Promoter MSA created ($PROMOTER_MSA_COUNT files)"
+            PROMOTER_RESULTS=1
+        else
+            echo "⚠️  Warning: Promoter MSA creation failed"
+            PROMOTER_RESULTS=0
+        fi
+    else
+        echo "⚠️  Warning: Promoter sequence extraction failed"
         PROMOTER_RESULTS=0
     fi
 else
-    echo "⚠️  Warning: Promoter sequence extraction failed"
-    PROMOTER_RESULTS=0
+    echo "⏭️  Skipping Step 3: Promoter extraction and MSA"
 fi
 
-# Step 4a: Create conservation plots for all operon genes
-echo ""
-echo "Step 4a: Creating conservation plots for all operon genes..."
-echo "========================================================"
-python create_gene_conservation_plots.py \
-    --msa-dir output/msa/dna_alignments \
-    --output-dir output/plots/gene_conservation
-echo "Gene conservation plots completed"
-echo ""
+########## Step 4 ##########
+if [ $START_STEP -le 4 ]; then
+    # Step 4a: Gene conservation plots
+    echo ""
+    echo "Step 4a: Creating conservation plots for all operon genes..."
+    echo "========================================================"
+    python create_gene_conservation_plots.py \
+        --msa-dir output/msa/dna_alignments \
+        --output-dir output/plots/gene_conservation
+    echo "Gene conservation plots completed"
+    echo ""
 
-# Step 4: Create enhanced promoter plots with Pribnow box
-echo ""
-echo "Step 4: Creating enhanced promoter conservation plots..."
-echo "======================================================"
-python create_promoter_plot_with_pribnow.py \
-    --blast-based \
-    --output-dir output/plots
+    # Step 4b: Enhanced promoter plots
+    echo ""
+    echo "Step 4: Creating enhanced promoter conservation plots..."
+    echo "======================================================"
+    python create_promoter_plot_with_pribnow.py \
+        --blast-based \
+        --output-dir output/plots
 
-if [ $? -eq 0 ]; then
-    echo "✅ Enhanced promoter plots created"
-    PLOT_RESULTS=1
+    if [ $? -eq 0 ]; then
+        echo "✅ Enhanced promoter plots created"
+        PLOT_RESULTS=1
+    else
+        echo "⚠️  Warning: Enhanced promoter plots failed"
+        PLOT_RESULTS=0
+    fi
 else
-    echo "⚠️  Warning: Enhanced promoter plots failed"
-    PLOT_RESULTS=0
+    echo "⏭️  Skipping Step 4: Conservation plots"
 fi
 
-# Step 5: BLAST-based diversity analysis (supplementary)
-echo ""
-echo "Step 5: Running BLAST-based diversity analysis..."
-echo "================================================="
-python extract_sequences_from_blast.py \
-    --blast-csv ../03_blast_search/output/all_blast_hits_complete.csv \
-    --analysis-only
+########## Step 5 ##########
+if [ $START_STEP -le 5 ]; then
+    echo ""
+    echo "Step 5: Running BLAST-based diversity analysis..."
+    echo "================================================="
+    python extract_sequences_from_blast.py \
+        --blast-csv ../03_blast_search/output/all_blast_hits_complete.csv \
+        --analysis-only
 
-if [ $? -eq 0 ]; then
-    echo "✅ BLAST diversity analysis completed"
+    if [ $? -eq 0 ]; then
+        echo "✅ BLAST diversity analysis completed"
+    else
+        echo "⚠️  Warning: BLAST diversity analysis failed"
+    fi
 else
-    echo "⚠️  Warning: BLAST diversity analysis failed"
+    echo "⏭️  Skipping Step 5: BLAST-based diversity analysis"
 fi
 
 # Generate summary
@@ -157,6 +234,12 @@ TOTAL_PROTEIN_MSA=$(find output/msa/protein_alignments -name "*_aligned.fasta" 2
 TOTAL_NONCODING_MSA=$(find output/msa/noncoding_alignments -name "*_aligned.fasta" 2>/dev/null | wc -l)
 TOTAL_PLOTS=$(find output/plots -name "*.png" 2>/dev/null | wc -l)
 TOTAL_BLAST_RESULTS=$(find output -name "*results.csv" 2>/dev/null | wc -l)
+# Promoter sequences count (number of sequences in promoter.fasta if present)
+if [ -f "output/noncoding_sequences/promoter.fasta" ]; then
+    TOTAL_PROMOTER_SEQ=$(grep -c '^>' output/noncoding_sequences/promoter.fasta)
+else
+    TOTAL_PROMOTER_SEQ=0
+fi
 
 echo "   - Gene sequences extracted: $TOTAL_GENE_FASTA"
 echo "   - DNA alignments created: $TOTAL_DNA_MSA"

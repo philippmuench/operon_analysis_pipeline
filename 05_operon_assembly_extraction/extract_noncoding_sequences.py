@@ -12,6 +12,7 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from collections import defaultdict
 import argparse
+from extract_operon_sequences import _find_fna_file
 
 def parse_blast_hit(blast_line):
     """Parse a BLAST hit line."""
@@ -92,20 +93,9 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
         if 'promoter' not in best_hits:
             continue
         
-        # Load genome sequence - try different possible paths
-        possible_paths = [
-            os.path.join(prokka_dir, f"{genome_id}/prokka_output/{genome_id}.fna"),
-            os.path.join(prokka_dir, f"{genome_id}/{genome_id}.fna"),
-            os.path.join(prokka_dir, f"{genome_id}.fna")
-        ]
-        
-        genome_file = None
-        for path in possible_paths:
-            if os.path.exists(path):
-                genome_file = path
-                break
-        
-        if not genome_file:
+        # Load genome sequence using the same resolver as gene extraction (.result-aware)
+        genome_file = _find_fna_file(prokka_dir, genome_id)
+        if genome_file is None:
             print(f"Warning: Genome file not found for {genome_id}")
             continue
         else:
@@ -127,6 +117,7 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
                 
                 # Extract core ID from BLAST hit (remove gnl|X| prefix and get base name)
                 blast_id = hit['sseqid']
+                blast_core = None
                 if 'gnl|X|' in blast_id:
                     blast_core = blast_id.split('gnl|X|')[1]
                     # Get the base name without suffix numbers
@@ -146,7 +137,7 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
                         match_found = True
                     
                     # Strategy 2: Core ID matching
-                    elif blast_core in seq_id or seq_id in blast_core:
+                    elif blast_core is not None and (blast_core in seq_id or seq_id in blast_core):
                         match_found = True
                     
                     # Strategy 3: Base name matching (handles BEOEMDHG_1 vs BEOEMDHG_15)
