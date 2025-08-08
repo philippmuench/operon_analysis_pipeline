@@ -136,10 +136,16 @@ if [ $START_STEP -le 3 ]; then
     echo ""
     echo "Step 3: Extracting promoter sequences from assemblies..."
     echo "======================================================="
+    # Choose genome source for promoter extraction here: 'prokka' or 'assemblies'
+    PROMOTER_SOURCE=${PROMOTER_SOURCE:-prokka}
+    ASSEMBLIES_DIR=${ASSEMBLIES_DIR:-../Efs_assemblies}
+
     python extract_noncoding_sequences.py \
         --blast-dir ../03_blast_search/output/blast_results \
         --output-dir output/noncoding_sequences \
-        --min-identity 70
+        --min-identity 70 \
+        --source "$PROMOTER_SOURCE" \
+        --assemblies-dir "$ASSEMBLIES_DIR"
 
     if [ $? -eq 0 ]; then
         echo "✅ Promoter sequences extracted"

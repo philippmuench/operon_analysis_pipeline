@@ -7,6 +7,7 @@ Uses BLAST results to find and extract promoter sequences.
 import os
 import sys
 import time
+import gzip
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -28,7 +29,38 @@ def parse_blast_hit(blast_line):
         'qcovs': float(fields[12]) if len(fields) > 12 else 100.0
     }
 
-def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90, min_coverage=50):
+def _find_assembly_fasta(assemblies_dir: str, genome_id: str):
+    """Return path to the raw assembly FASTA for a given genome_id.
+
+    Tries exact filenames only:
+    - {assemblies_dir}/{genome_id}.result.fasta.gz
+    - {assemblies_dir}/{genome_id}.result.fasta
+    """
+    if not assemblies_dir:
+        return None
+    candidates = [
+        os.path.join(assemblies_dir, f"{genome_id}.result.fasta.gz"),
+        os.path.join(assemblies_dir, f"{genome_id}.result.fasta"),
+    ]
+    for cand in candidates:
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+def _read_genome_sequences(genome_file: str):
+    """Read sequences from a FASTA file (supports .gz) and return id->seq dict."""
+    sequences = {}
+    handle = gzip.open(genome_file, 'rt') if genome_file.endswith('.gz') else open(genome_file, 'r')
+    try:
+        for record in SeqIO.parse(handle, "fasta"):
+            sequences[record.id] = record.seq
+    finally:
+        handle.close()
+    return sequences
+
+
+def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90, min_coverage=50, source="prokka", assemblies_dir=None):
     """Extract promoter sequences from genomes."""
     
     # Create output directory
@@ -94,19 +126,23 @@ def extract_noncoding_sequences(prokka_dir, blast_results_dir, output_dir, min_i
         if 'promoter' not in best_hits:
             continue
         
-        # Load genome sequence using the same resolver as gene extraction (.result-aware)
-        genome_file = _find_fna_file(prokka_dir, genome_id)
+        # Load genome sequence from requested source (no cross-source fallback)
+        if source == "prokka":
+            genome_file = _find_fna_file(prokka_dir, genome_id)
+        elif source == "assemblies":
+            genome_file = _find_assembly_fasta(assemblies_dir, genome_id)
+        else:
+            genome_file = None
+
         if genome_file is None:
-            print(f"Warning: Genome file not found for {genome_id}")
+            print(f"Warning: Genome file not found for {genome_id} (source={source})")
             continue
         else:
             print(f"  Using genome FASTA: {genome_file}")
             sys.stdout.flush()
-        
+
         # Read genome sequences
-        genome_seqs = {}
-        for record in SeqIO.parse(genome_file, "fasta"):
-            genome_seqs[record.id] = record.seq
+        genome_seqs = _read_genome_sequences(genome_file)
         
         # Extract sequences
         for element in noncoding_elements:
@@ -236,6 +272,10 @@ def main():
                         help="Minimum sequence identity")
     parser.add_argument("--min-coverage", type=float, default=50, 
                         help="Minimum query coverage")
+    parser.add_argument("--source", choices=["prokka", "assemblies"], default="prokka",
+                        help="Choose genome source: 'prokka' for Prokka .fna, 'assemblies' for raw assemblies")
+    parser.add_argument("--assemblies-dir", default="../Efs_assemblies",
+                        help="Directory containing raw assemblies when --source=assemblies")
     
     args = parser.parse_args()
     
@@ -245,7 +285,9 @@ def main():
         args.blast_dir, 
         args.output_dir,
         args.min_identity,
-        args.min_coverage
+        args.min_coverage,
+        args.source,
+        args.assemblies_dir,
     )
     
     print("\nExtraction summary:")
