@@ -21,6 +21,34 @@ All outputs are written to the `output/` directory:
 - `msa/noncoding_alignments/`: MSAs for non-coding regions
 - `extraction_summary.txt`: Summary of extraction process
 
+### Multi-strategy mapping outputs (refactored)
+
+To make strategy provenance explicit, multi-strategy results are organized under `output/mappings/`:
+
+```
+output/mappings/
+├── aa_nt_mapping/
+│   ├── prokka/            # tblastn (aa→nt), sequences extracted from Prokka .fna
+│   │   ├── sequences/
+│   │   ├── msa/
+│   │   └── plots/
+│   └── assemblies/        # tblastn (aa→nt), sequences extracted from raw assemblies
+│       ├── sequences/
+│       ├── msa/
+│       └── plots/
+└── nt_nt_mapping/
+    ├── prokka_genome/     # blastn (nt→nt), Prokka .fna as subject
+    │   ├── sequences/
+    │   ├── msa/
+    │   └── plots/
+    └── prokka_variants/   # blastn (nt→nt), Prokka .ffn vs reference DB (qseq variant style)
+        ├── gene_variants/
+        ├── msa_variants/
+        └── plots/
+```
+
+Plots include provenance and sequence counts in their titles, e.g. `… (n=123) — aa_vs_nt; source=prokka`.
+
 ## Scripts
 
 ### Core Extraction Scripts
@@ -78,7 +106,7 @@ Enhanced promoter plotting with Pribnow box annotation.
 ## Usage
 
 ### SLURM (HPC) submission
-Submit the full step via SLURM (recommended on login nodes):
+Submit the full step via SLURM (defaults to ALL strategies):
 
 ```bash
 sbatch 05_operon_assembly_extraction/run_operon_extraction.sh
@@ -97,12 +125,12 @@ squeue -j <JOBID>
 tail -f 05_operon_assembly_extraction/operon_extraction_<JOBID>.out
 ```
 
-### Complete Pipeline
+### Strategy selection (optional)
+By default, all strategies run: `current, nt_vs_genome, prokka_variants, assemblies`.
+To restrict strategies:
+
 ```bash
-# Run full extraction and MSA pipeline
-python extract_operon_sequences.py
-python extract_noncoding_sequences.py
-python create_msa.py
+sbatch 05_operon_assembly_extraction/run_operon_extraction.sh --strategies current,prokka_variants
 ```
 
 ### Individual Steps

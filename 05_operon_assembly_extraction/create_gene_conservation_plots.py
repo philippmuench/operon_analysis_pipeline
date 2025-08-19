@@ -55,7 +55,7 @@ def calculate_conservation_per_position(alignment_file):
     
     return conservation_scores, gap_frequencies
 
-def create_gene_conservation_plot(alignment_file, output_file, gene_name):
+def create_gene_conservation_plot(alignment_file, output_file, gene_name, title_suffix: str = ""):
     """Create a two-panel conservation plot for a gene."""
     conservation_scores, gap_frequencies = calculate_conservation_per_position(alignment_file)
     
@@ -63,6 +63,11 @@ def create_gene_conservation_plot(alignment_file, output_file, gene_name):
         print(f"Warning: No sequences found in {alignment_file}")
         return False
     
+    # Count sequences used
+    num_sequences = 0
+    for _ in SeqIO.parse(alignment_file, "fasta"):
+        num_sequences += 1
+
     # Create figure with two subplots
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
     
@@ -72,7 +77,8 @@ def create_gene_conservation_plot(alignment_file, output_file, gene_name):
     ax1.plot(positions, conservation_scores, color='blue', linewidth=1)
     ax1.fill_between(positions, conservation_scores, alpha=0.3, color='blue')
     ax1.set_ylabel('Conservation Score\n(SNP-based)', fontsize=12)
-    ax1.set_title(f'{gene_name} Gene Conservation Analysis', fontsize=14, fontweight='bold')
+    suffix_text = f" — {title_suffix}" if title_suffix else ""
+    ax1.set_title(f'{gene_name} Gene Conservation (n={num_sequences}){suffix_text}', fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     ax1.set_ylim(0, 1)
     
@@ -96,6 +102,7 @@ def main():
                         help="Directory containing MSA files")
     parser.add_argument("--output-dir", default="output/plots/gene_conservation", 
                         help="Output directory for conservation plots")
+    parser.add_argument("--title-suffix", default="", help="Suffix text to append in the plot title for provenance (e.g., 'aa_vs_nt; source=prokka')")
     
     args = parser.parse_args()
     
@@ -119,7 +126,7 @@ def main():
         
         print(f"  Processing {gene_name}...")
         
-        success = create_gene_conservation_plot(msa_path, output_file, gene_name)
+        success = create_gene_conservation_plot(msa_path, output_file, gene_name, args.title_suffix)
         if success:
             successful_plots += 1
             print(f"    ✅ Created: {output_file}")

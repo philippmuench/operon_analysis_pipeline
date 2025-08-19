@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+u#!/usr/bin/env python3
 """
 Process BLAST results to identify genomes with complete operons.
 """

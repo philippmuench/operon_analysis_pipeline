@@ -6,6 +6,7 @@ Creates multiple sequence alignments using MAFFT.
 
 import os
 import subprocess
+import os
 import pandas as pd
 import argparse
 from Bio import SeqIO, AlignIO
@@ -21,7 +22,11 @@ def run_mafft(input_file, output_file, threads=1):
     
     try:
         with open(output_file, 'w') as f:
-            result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+            env = os.environ.copy()
+            # Default MAFFT tmp to /vol/tmp if not already set
+            env.setdefault('MAFFT_TMPDIR', '/vol/tmp')
+            env.setdefault('TMPDIR', env['MAFFT_TMPDIR'])
+            result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True, env=env)
         
         if result.returncode != 0:
             print(f"MAFFT failed for {input_file}: {result.stderr}")

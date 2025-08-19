@@ -54,7 +54,7 @@ def calculate_conservation_per_position(alignment_file):
     
     return conservation_scores, gap_frequencies
 
-def create_promoter_plot_with_pribnow(alignment_file, output_file, pribnow_start=43, pribnow_end=50):
+def create_promoter_plot_with_pribnow(alignment_file, output_file, pribnow_start=43, pribnow_end=50, title_suffix: str = ""):
     """Create promoter conservation plot with Pribnow box highlighted."""
     
     if not os.path.exists(alignment_file):
@@ -64,6 +64,12 @@ def create_promoter_plot_with_pribnow(alignment_file, output_file, pribnow_start
     # Calculate conservation scores and gap frequencies
     print("Calculating conservation scores and gap frequencies...")
     scores, gap_frequencies = calculate_conservation_per_position(alignment_file)
+    # Count sequences in alignment
+    try:
+        alignment = AlignIO.read(alignment_file, "fasta")
+        n_seqs = len(alignment)
+    except Exception:
+        n_seqs = None
     positions = range(1, len(scores) + 1)
     
     # Create plot with two subplots
@@ -99,7 +105,9 @@ def create_promoter_plot_with_pribnow(alignment_file, output_file, pribnow_start
     ax1.set_ylim(0, 1)
     ax1.set_xlim(1, len(scores))
     ax1.set_ylabel('Conservation Score (SNP-based)')
-    ax1.set_title('Promoter SNP Analysis with Pribnow Box (-10 box)\n(Higher score = fewer SNPs = more conserved)')
+    suffix_text = f" — {title_suffix}" if title_suffix else ""
+    n_text = f" (n={n_seqs})" if n_seqs is not None else ""
+    ax1.set_title(f'Promoter SNP Analysis with Pribnow Box (-10 box){n_text}{suffix_text}\n(Higher score = fewer SNPs = more conserved)')
     ax1.grid(True, alpha=0.3)
     
     # LOWER PLOT: Gap frequencies
@@ -157,7 +165,7 @@ def create_promoter_plot_with_pribnow(alignment_file, output_file, pribnow_start
     
     return output_file
 
-def create_promoter_plot_from_blast_with_pribnow(output_dir):
+def create_promoter_plot_from_blast_with_pribnow(output_dir, title_suffix: str = ""):
     """Create promoter plot from BLAST data with Pribnow box annotation."""
     
     # Read BLAST results to get promoter data
@@ -247,7 +255,8 @@ def create_promoter_plot_from_blast_with_pribnow(output_dir):
     ax1.set_ylim(0, 1)
     ax1.set_xlim(1, len(conservation_scores))
     ax1.set_ylabel('Conservation Score')
-    ax1.set_title('Promoter Conservation Profile with Pribnow Box (-10 box)')
+    suffix_text = f" — {title_suffix}" if title_suffix else ""
+    ax1.set_title(f'Promoter Conservation Profile with Pribnow Box (-10 box) (n={len(best_hits)}){suffix_text}')
     ax1.grid(True, alpha=0.3)
     
     # Add average line to conservation plot
@@ -318,6 +327,8 @@ def main():
                         help="End position of Pribnow box (default: 50)")
     parser.add_argument("--blast-based", action="store_true",
                         help="Create plot from BLAST data instead of alignment")
+    parser.add_argument("--title-suffix", default="",
+                        help="Suffix text to append in the plot title for provenance (e.g., 'source=prokka')")
     
     args = parser.parse_args()
     
@@ -329,22 +340,22 @@ def main():
             print("Using real alignment data instead of BLAST estimates...")
             output_file = os.path.join(args.output_dir, "promoter_conservation_with_pribnow.png")
             result = create_promoter_plot_with_pribnow(
-                args.alignment, output_file, args.pribnow_start, args.pribnow_end
+                args.alignment, output_file, args.pribnow_start, args.pribnow_end, args.title_suffix
             )
         else:
             print("No alignment found, creating BLAST-based plot...")
-            result = create_promoter_plot_from_blast_with_pribnow(args.output_dir)
+            result = create_promoter_plot_from_blast_with_pribnow(args.output_dir, args.title_suffix)
     else:
         # Create from alignment if available
         if os.path.exists(args.alignment):
             output_file = os.path.join(args.output_dir, "promoter_conservation_with_pribnow.png")
             result = create_promoter_plot_with_pribnow(
-                args.alignment, output_file, args.pribnow_start, args.pribnow_end
+                args.alignment, output_file, args.pribnow_start, args.pribnow_end, args.title_suffix
             )
         else:
             print(f"Alignment file not found: {args.alignment}")
             print("Falling back to BLAST-based plot...")
-            result = create_promoter_plot_from_blast_with_pribnow(args.output_dir)
+            result = create_promoter_plot_from_blast_with_pribnow(args.output_dir, args.title_suffix)
     
     if result:
         print(f"\n✅ Success! Enhanced promoter plot created.")

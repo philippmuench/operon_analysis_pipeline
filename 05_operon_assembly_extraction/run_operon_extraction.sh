@@ -15,6 +15,8 @@
 # Parse command line arguments
 START_STEP=1
 HELP=false
+# Default: run all strategies
+STRATEGIES="current,nt_vs_genome,prokka_variants,assemblies"
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -23,6 +25,7 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --start-step STEP    Start pipeline from specific step (1-5, default: 1)"
+    echo "  --strategies LIST    Comma-separated: current,nt_vs_genome,prokka_variants,assemblies (default: current)"
     echo "  --help               Show this help message"
     echo ""
     echo "Available steps:"
@@ -31,16 +34,22 @@ usage() {
     echo "  3. Extract promoter sequences and create promoter MSA"
     echo "  4. Create conservation plots (genes and enhanced promoter plots)"
     echo "  5. BLAST-based diversity analysis (supplementary) and summary"
+    echo "  6. Run multi-strategy MSAs (nt-vs-nt, tblastn, Prokka .ffn variants) and plots"
     echo ""
     echo "Examples:"
-    echo "  $0                    # Run complete pipeline"
-    echo "  $0 --start-step 3     # Start from promoter extraction and MSA"
+    echo "  $0                                      # Run complete pipeline (current strategy)"
+    echo "  $0 --strategies current,prokka_variants  # Run current + old-look variants in one go"
+    echo "  $0 --start-step 3                       # Start from promoter extraction and MSA"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --start-step)
             START_STEP="$2"
+            shift 2
+            ;;
+        --strategies)
+            STRATEGIES="$2"
             shift 2
             ;;
         --help)
@@ -72,10 +81,18 @@ echo "Operon Sequence Extraction Pipeline"
 echo "Started: $(date)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Starting from step: $START_STEP"
+echo "Strategies: $STRATEGIES"
 echo "=================================================="
 
 # Change to script directory
 cd /vol/projects/BIFO/genomenet/baerbel_science_rebuttal/operon_analysis/05_operon_assembly_extraction
+
+# Ensure MAFFT temporary directory uses fast local scratch by default
+MAFFT_TMP_DEFAULT="/vol/tmp"
+mkdir -p "${MAFFT_TMPDIR:-$MAFFT_TMP_DEFAULT}" || true
+export MAFFT_TMPDIR="${MAFFT_TMPDIR:-$MAFFT_TMP_DEFAULT}"
+export TMPDIR="${TMPDIR:-$MAFFT_TMPDIR}"
+echo "Using MAFFT_TMPDIR=$MAFFT_TMPDIR (TMPDIR=$TMPDIR)"
 
 # Create output directories
 echo ""
@@ -94,23 +111,23 @@ if [ $START_STEP -le 1 ]; then
     GENOME_SOURCE=${GENOME_SOURCE:-prokka}
     ASSEMBLIES_DIR=${ASSEMBLIES_DIR:-../Efs_assemblies}
 
-    python extract_operon_sequences.py \
-        --prokka_dir ../01_prokka_annotation/output/prokka_results \
-        --blast_dir ../03_blast_search/output/blast_results \
-        --output_dir output/sequences \
-        --min_identity 90 \
-        --min_coverage 80 \
-        --source "$GENOME_SOURCE" \
-        --assemblies_dir "$ASSEMBLIES_DIR"
+    if has_strategy current; then
+        python extract_operon_sequences.py \
+            --prokka_dir ../01_prokka_annotation/output/prokka_results \
+            --blast_dir ../03_blast_search/output/blast_results \
+            --output_dir output/sequences \
+            --min_identity 90 \
+            --min_coverage 80 \
+            --source "$GENOME_SOURCE" \
+            --assemblies_dir "$ASSEMBLIES_DIR"
 
-    if [ $? -ne 0 ]; then
-        echo "❌ Error: Real sequence extraction failed"
-        exit 1
+        if [ $? -ne 0 ]; then
+            echo "❌ Error: Real sequence extraction failed (current)"
+            exit 1
+        fi
+        GENE_FASTA_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
+        echo "✅ Real sequence extraction (current) completed ($GENE_FASTA_COUNT gene files)"
     fi
-
-    # Check if sequences were extracted
-    GENE_FASTA_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
-    echo "✅ Real sequence extraction completed ($GENE_FASTA_COUNT gene files)"
 else
     echo "⏭️  Skipping Step 1: Gene sequence extraction"
 fi
@@ -120,18 +137,17 @@ if [ $START_STEP -le 2 ]; then
     echo ""
     echo "Step 2: Creating Multiple Sequence Alignments..."
     echo "================================================"
-    python create_msa.py \
-        --coding-sequences output/sequences \
-        --output-dir output/msa \
-        --threads ${SLURM_CPUS_PER_TASK:-8}
-
-    if [ $? -eq 0 ]; then
-        DNA_MSA_COUNT=$(find output/msa/dna_alignments -name "*.fasta" 2>/dev/null | wc -l)
-        echo "✅ MSA creation completed ($DNA_MSA_COUNT DNA alignments)"
-        MSA_RESULTS=1
-    else
-        echo "⚠️  Warning: MSA creation failed"
-        MSA_RESULTS=0
+    if has_strategy current; then
+        python create_msa.py \
+            --coding-sequences output/sequences \
+            --output-dir output/msa \
+            --threads ${SLURM_CPUS_PER_TASK:-8}
+        if [ $? -eq 0 ]; then
+            DNA_MSA_COUNT=$(find output/msa/dna_alignments -name "*.fasta" 2>/dev/null | wc -l)
+            echo "✅ MSA (current) completed ($DNA_MSA_COUNT DNA alignments)"
+        else
+            echo "⚠️  Warning: MSA (current) failed"
+        fi
     fi
 else
     echo "⏭️  Skipping Step 2: MSA creation for genes"
@@ -189,7 +205,8 @@ if [ $START_STEP -le 4 ]; then
     echo "========================================================"
     python create_gene_conservation_plots.py \
         --msa-dir output/msa/dna_alignments \
-        --output-dir output/plots/gene_conservation
+        --output-dir output/plots/gene_conservation \
+        --title-suffix "aa_vs_nt; source=${GENOME_SOURCE}"
     echo "Gene conservation plots completed"
     echo ""
 
@@ -199,7 +216,8 @@ if [ $START_STEP -le 4 ]; then
     echo "======================================================"
     python create_promoter_plot_with_pribnow.py \
         --blast-based \
-        --output-dir output/plots
+        --output-dir output/plots \
+        --title-suffix "source=${PROMOTER_SOURCE}"
 
     if [ $? -eq 0 ]; then
         echo "✅ Enhanced promoter plots created"
@@ -228,6 +246,23 @@ if [ $START_STEP -le 5 ]; then
     fi
 else
     echo "⏭️  Skipping Step 5: BLAST-based diversity analysis"
+fi
+
+# ########## Step 6 ##########
+if [ $START_STEP -le 6 ]; then
+    echo ""
+    echo "Step 6: Running multi-strategy MSA comparison (reproduce old vs new alignments)"
+    echo "============================================================================="
+    bash run_multi_strategy_pipeline.sh
+
+    if [ $? -eq 0 ]; then
+        echo "✅ Multi-strategy MSAs and plots completed"
+        echo "   See: output/mappings/{aa_nt_mapping,nt_nt_mapping}/..."
+    else
+        echo "⚠️  Warning: Multi-strategy pipeline failed"
+    fi
+else
+    echo "⏭️  Skipping Step 6: Multi-strategy MSAs"
 fi
 
 # Generate summary
