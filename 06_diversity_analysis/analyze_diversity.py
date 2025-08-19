@@ -51,6 +51,42 @@ def calculate_conservation_per_position(alignment_file):
     
     return conservation_scores
 
+def calculate_average_identity(alignment_file):
+    """Calculate average pairwise sequence identity."""
+    alignment = AlignIO.read(alignment_file, "fasta")
+    n_seqs = len(alignment)
+    
+    if n_seqs < 2:
+        return 100.0
+    
+    total_comparisons = 0
+    total_identity = 0
+    
+    for i in range(n_seqs):
+        for j in range(i + 1, n_seqs):
+            seq1 = str(alignment[i].seq)
+            seq2 = str(alignment[j].seq)
+            
+            # Calculate identity (excluding gaps)
+            matches = 0
+            valid_positions = 0
+            
+            for k in range(len(seq1)):
+                if seq1[k] != '-' and seq2[k] != '-':
+                    valid_positions += 1
+                    if seq1[k] == seq2[k]:
+                        matches += 1
+            
+            if valid_positions > 0:
+                identity = (matches / valid_positions) * 100
+                total_identity += identity
+                total_comparisons += 1
+    
+    if total_comparisons > 0:
+        return total_identity / total_comparisons
+    else:
+        return 100.0
+
 def calculate_substitutions(alignment_file, reference_idx=0):
     """Calculate substitution types relative to reference."""
     alignment = AlignIO.read(alignment_file, "fasta")
@@ -290,14 +326,14 @@ def analyze_all_genes(msa_dir, output_dir):
                 dnds_result = calculate_dnds(dna_path, protein_path)
                 result.update(dnds_result)
             
-            # Get identity from summary if available
-            summary_file = os.path.join(msa_dir, 'alignment_summary.csv')
-            if os.path.exists(summary_file):
-                summary_df = pd.read_csv(summary_file)
-                gene_data = summary_df[summary_df['gene'] == gene_name]
-                if not gene_data.empty:
-                    result['dna_identity'] = gene_data['dna_identity'].values[0]
-                    result['protein_identity'] = gene_data['protein_identity'].values[0]
+            # Calculate sequence identity manually
+            result['dna_identity'] = calculate_average_identity(dna_path)
+            
+            # Calculate protein identity if protein alignment exists
+            if os.path.exists(protein_path):
+                result['protein_identity'] = calculate_average_identity(protein_path)
+            else:
+                result['protein_identity'] = None
             
             results.append(result)
     

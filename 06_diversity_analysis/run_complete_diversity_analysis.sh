@@ -199,11 +199,17 @@ echo "--------------------------------------------------------"
 
 # Generate comparative diversity summary
 echo "Creating comparative diversity summary..."
-python generate_diversity_summary.py \
-    --strategy_a_dir output/diversity_analysis_strategy_a \
-    --strategy_d_dir output/diversity_analysis_strategy_d \
-    --core_gene_dir output/core_gene_analysis \
-    --output_dir output/comparative_analysis
+# Check if required files exist before running summary
+if [ -f "output/core_gene_analysis/core_gene_diversity_results.csv" ] && \
+   [ -f "output/diversity_analysis_strategy_a/diversity_results.csv" ]; then
+    python generate_diversity_summary.py \
+        --core_diversity output/core_gene_analysis/core_gene_diversity_results.csv \
+        --operon_diversity output/diversity_analysis_strategy_a/diversity_results.csv \
+        --dnds_results output/diversity_analysis_strategy_a/diversity_results.csv \
+        --output output/comparative_analysis/strategy_comparison.csv
+else
+    echo "⚠️  Required files not found for comparative summary"
+fi
 
 if [ $? -eq 0 ]; then
     echo "✓ Comparative analysis completed"

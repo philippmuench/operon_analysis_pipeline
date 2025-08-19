@@ -11,6 +11,7 @@ import subprocess
 from multiprocessing import Pool, cpu_count
 import random
 import numpy as np
+import argparse
 
 def sample_sequences(input_file, output_file, n_sample=1000):
     """Sample sequences using Python instead of seqkit"""
@@ -104,23 +105,28 @@ def calculate_diversity_single_gene(args):
         return None
 
 def main():
+    parser = argparse.ArgumentParser(description="Analyze all core genes diversity")
+    parser.add_argument('--core_dir', default='output/core_gene_msa',
+                        help='Directory with core gene MSAs')
+    parser.add_argument('--output_dir', default='output/core_gene_analysis',
+                        help='Output directory')
+    
+    args = parser.parse_args()
+    
     print("=== Analyzing ALL Core Genes ===")
     print(f"Time: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Read core genes list
-    with open('core_genes_95pct.txt', 'r') as f:
-        core_genes = [line.strip() for line in f if line.strip()]
+    # Create output directory
+    os.makedirs(args.output_dir, exist_ok=True)
     
-    print(f"Total core genes to analyze: {len(core_genes)}")
-    
-    # Get all sequence files
-    seq_dir = 'core_gene_sequences_95pct'
+    # Get all MSA files from the provided directory
     gene_files = []
-    
-    for gene in core_genes:
-        seq_file = os.path.join(seq_dir, f"{gene.replace('/', '_').replace(' ', '_')}.fasta")
-        if os.path.exists(seq_file):
-            gene_files.append((seq_file, gene))
+    if os.path.exists(args.core_dir):
+        for filename in os.listdir(args.core_dir):
+            if filename.endswith('.fasta'):
+                gene_name = filename.replace('.fasta', '')
+                seq_file = os.path.join(args.core_dir, filename)
+                gene_files.append((seq_file, gene_name))
     
     print(f"Found sequence files for {len(gene_files)} genes")
     
@@ -192,8 +198,14 @@ def main():
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     
     plt.tight_layout()
-    plt.savefig('all_core_vs_operon_diversity.png', dpi=300, bbox_inches='tight')
-    print("\nVisualization saved to all_core_vs_operon_diversity.png")
+    plot_file = os.path.join(args.output_dir, 'all_core_vs_operon_diversity.png')
+    plt.savefig(plot_file, dpi=300, bbox_inches='tight')
+    print(f"\nVisualization saved to {plot_file}")
+    
+    # Save results
+    results_file = os.path.join(args.output_dir, 'core_gene_diversity_results.csv')
+    df.to_csv(results_file, index=False)
+    print(f"Results saved to {results_file}")
 
 if __name__ == '__main__':
     main()
