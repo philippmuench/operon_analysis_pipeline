@@ -18,7 +18,7 @@ def count_input_genomes():
     return len(genome_files)
 
 def analyze_prokka_outputs():
-    """Analyze Prokka annotation outputs."""
+    """Analyze Prokka annotation outputs with outlier detection."""
     output_dir = "../prokka_output"
     if not os.path.exists(output_dir):
         output_dir = "output/prokka_results"  # Test mode fallback
@@ -37,14 +37,19 @@ def analyze_prokka_outputs():
         "total_proteins": 0,
         "avg_genes_per_genome": 0,
         "avg_proteins_per_genome": 0,
-        "file_counts": defaultdict(int)
+        "file_counts": defaultdict(int),
+        "gene_count_outliers": []
     }
     
     expected_files = ["gff", "faa", "ffn", "fna", "gbk", "log", "txt", "tsv"]
     gene_counts = []
     protein_counts = []
+    genome_gene_data = []  # Store (genome_id, gene_count) for outlier detection
     
-    for genome_dir in genome_dirs[:100]:  # Sample first 100 for speed
+    # Sample size for analysis (increase for more comprehensive check)
+    sample_size = min(1000, len(genome_dirs))  # Check up to 1000 genomes
+    
+    for genome_dir in genome_dirs[:sample_size]:
         genome_path = os.path.join(output_dir, genome_dir)
         
         # Check if genome is complete
@@ -66,9 +71,12 @@ def analyze_prokka_outputs():
                     with open(gff_file, 'r') as f:
                         gene_count = sum(1 for line in f if not line.startswith('#') and 'CDS' in line)
                     gene_counts.append(gene_count)
+                    genome_gene_data.append((genome_dir, gene_count))
                     stats["total_genes"] += gene_count
                 except:
-                    pass
+                    genome_gene_data.append((genome_dir, 0))
+            else:
+                genome_gene_data.append((genome_dir, 0))
             
             # Count proteins from FAA file
             faa_file = os.path.join(genome_path, f"{genome_dir}.faa")
@@ -81,12 +89,55 @@ def analyze_prokka_outputs():
                 except:
                     pass
     
-    # Calculate averages
+    # Calculate averages and identify outliers
     if gene_counts:
+        import numpy as np
+        
         stats["avg_genes_per_genome"] = sum(gene_counts) / len(gene_counts)
+        stats["median_genes_per_genome"] = np.median(gene_counts)
+        stats["std_genes_per_genome"] = np.std(gene_counts)
+        stats["min_genes_per_genome"] = min(gene_counts)
+        stats["max_genes_per_genome"] = max(gene_counts)
+        
+        # Identify outliers (genomes with very few genes)
+        # Use Q1 - 1.5*IQR as lower bound for outliers
+        q1 = np.percentile(gene_counts, 25)
+        q3 = np.percentile(gene_counts, 75)
+        iqr = q3 - q1
+        lower_bound = q1 - 1.5 * iqr
+        
+        outliers = []
+        very_low_gene_genomes = []
+        
+        for genome_id, gene_count in genome_gene_data:
+            if gene_count < lower_bound:
+                outliers.append((genome_id, gene_count))
+            if gene_count < 1000:  # Flag genomes with < 1000 genes as potentially problematic
+                very_low_gene_genomes.append((genome_id, gene_count))
+        
+        stats["gene_count_outliers"] = sorted(outliers, key=lambda x: x[1])[:10]  # Top 10 outliers
+        stats["very_low_gene_genomes"] = sorted(very_low_gene_genomes, key=lambda x: x[1])[:10]
+        stats["num_outliers"] = len(outliers)
+        stats["num_very_low_gene"] = len(very_low_gene_genomes)
+        stats["lower_bound_threshold"] = lower_bound
+        
+        # Percentile distribution
+        stats["gene_count_percentiles"] = {
+            "1%": np.percentile(gene_counts, 1),
+            "5%": np.percentile(gene_counts, 5),
+            "10%": np.percentile(gene_counts, 10),
+            "25%": q1,
+            "50%": np.percentile(gene_counts, 50),
+            "75%": q3,
+            "90%": np.percentile(gene_counts, 90),
+            "95%": np.percentile(gene_counts, 95),
+            "99%": np.percentile(gene_counts, 99)
+        }
+    
     if protein_counts:
         stats["avg_proteins_per_genome"] = sum(protein_counts) / len(protein_counts)
     
+    stats["sample_size"] = sample_size
     return stats
 
 def get_prokka_version():
@@ -123,16 +174,37 @@ def generate_manuscript_stats():
     
     if "error" not in prokka_stats:
         print(f"   Total genomes processed: {prokka_stats['total_genomes']:,}")
+        print(f"   Sample analyzed: {prokka_stats.get('sample_size', 0):,}")
         print(f"   Complete annotations: {prokka_stats['complete_genomes']:,}")
         if prokka_stats['complete_genomes'] > 0:
-            completion_rate = prokka_stats['complete_genomes'] / prokka_stats['total_genomes'] * 100
+            completion_rate = prokka_stats['complete_genomes'] / prokka_stats.get('sample_size', 1) * 100
             print(f"   Success rate: {completion_rate:.1f}%")
         
         if prokka_stats['avg_genes_per_genome'] > 0:
             print(f"   Average genes per genome: {prokka_stats['avg_genes_per_genome']:.0f}")
-            print(f"   Average proteins per genome: {prokka_stats['avg_proteins_per_genome']:.0f}")
+            print(f"   Median genes per genome: {prokka_stats.get('median_genes_per_genome', 0):.0f}")
+            print(f"   Gene count range: {prokka_stats.get('min_genes_per_genome', 0):.0f}-{prokka_stats.get('max_genes_per_genome', 0):.0f}")
+            print(f"   Standard deviation: {prokka_stats.get('std_genes_per_genome', 0):.0f}")
             print(f"   Total genes annotated: {prokka_stats['total_genes']:,}")
-            print(f"   Total proteins predicted: {prokka_stats['total_proteins']:,}")
+            
+            # Outlier analysis
+            if prokka_stats.get('num_very_low_gene', 0) > 0:
+                print(f"\n   Quality Control - Potential Outliers:")
+                print(f"   Genomes with <1000 genes: {prokka_stats['num_very_low_gene']:,}")
+                print(f"   Statistical outliers: {prokka_stats.get('num_outliers', 0):,}")
+                
+                if prokka_stats.get('very_low_gene_genomes'):
+                    print(f"   Examples of low-gene genomes:")
+                    for genome_id, gene_count in prokka_stats['very_low_gene_genomes'][:5]:
+                        print(f"     {genome_id}: {gene_count} genes")
+                
+                # Percentile distribution
+                if prokka_stats.get('gene_count_percentiles'):
+                    print(f"   Gene count distribution:")
+                    percentiles = prokka_stats['gene_count_percentiles']
+                    print(f"     1%: {percentiles['1%']:.0f}, 5%: {percentiles['5%']:.0f}, 10%: {percentiles['10%']:.0f}")
+                    print(f"     25%: {percentiles['25%']:.0f}, 50%: {percentiles['50%']:.0f}, 75%: {percentiles['75%']:.0f}")
+                    print(f"     90%: {percentiles['90%']:.0f}, 95%: {percentiles['95%']:.0f}, 99%: {percentiles['99%']:.0f}")
     else:
         print(f"   {prokka_stats['error']}")
     
