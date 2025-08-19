@@ -21,33 +21,37 @@ All outputs are written to the `output/` directory:
 - `msa/noncoding_alignments/`: MSAs for non-coding regions
 - `extraction_summary.txt`: Summary of extraction process
 
-### Multi-strategy mapping outputs (refactored)
+### Multi-strategy mapping outputs
 
-To make strategy provenance explicit, multi-strategy results are organized under `output/mappings/`:
+Four different extraction strategies organized under `output/mappings/`:
 
 ```
 output/mappings/
 ├── aa_nt_mapping/
-│   ├── prokka/            # tblastn (aa→nt), sequences extracted from Prokka .fna
+│   ├── prokka/            # Strategy A: tblastn (protein→nt), Prokka genomes
 │   │   ├── sequences/
 │   │   ├── msa/
-│   │   └── plots/
-│   └── assemblies/        # tblastn (aa→nt), sequences extracted from raw assemblies
+│   │   ├── plots/         # SNP-based conservation plots
+│   │   └── enhanced_plots/ # Shannon entropy + sequence logos
+│   └── assemblies/        # Strategy D: tblastn (protein→nt), raw assemblies  
 │       ├── sequences/
 │       ├── msa/
-│       └── plots/
+│       ├── plots/
+│       └── enhanced_plots/
 └── nt_nt_mapping/
-    ├── prokka_genome/     # blastn (nt→nt), Prokka .fna as subject
+    ├── prokka_genome/     # Strategy B: blastn (nt→nt), Prokka genomes
     │   ├── sequences/
     │   ├── msa/
-    │   └── plots/
-    └── prokka_variants/   # blastn (nt→nt), Prokka .ffn vs reference DB (qseq variant style)
+    │   ├── plots/
+    │   └── enhanced_plots/
+    └── prokka_variants/   # Strategy C: blastn (reverse), capture variants
         ├── gene_variants/
         ├── msa_variants/
-        └── plots/
+        ├── plots/
+        └── enhanced_plots/
 ```
 
-Plots include provenance and sequence counts in their titles, e.g. `… (n=123) — aa_vs_nt; source=prokka`.
+See `output/mappings/README.md` for detailed strategy explanations.
 
 ## Scripts
 
@@ -103,10 +107,17 @@ Enhanced promoter plotting with Pribnow box annotation.
 - Shows conservation patterns around regulatory elements
 - Publication-ready plots with detailed annotations
 
+#### `create_enhanced_conservation_plots.py`
+Advanced conservation visualization with Shannon entropy and sequence logos.
+- Shannon entropy-based conservation scores (frequency-weighted)
+- Sequence logos showing nucleotide frequency patterns
+- Two-panel plots: conservation profile + sequence motifs
+- More biologically meaningful than simple SNP counting
+
 ## Usage
 
 ### SLURM (HPC) submission
-Submit the full pipeline (all 6 steps):
+Submit the full pipeline (all 7 steps):
 
 ```bash
 sbatch run_operon_extraction.sh
@@ -131,15 +142,20 @@ Start from a specific step:
 ```bash
 sbatch run_operon_extraction.sh --start-step 3    # Start from promoter analysis
 sbatch run_operon_extraction.sh --start-step 6    # Run only multi-strategy comparison
+sbatch run_operon_extraction.sh --start-step 7    # Run only enhanced plots
+
+# Run specific strategies only
+sbatch run_operon_extraction.sh --strategies A,D  # Run only strategies A and D
 ```
 
 ### Pipeline Steps
 1. **Gene sequence extraction** - Extract operon genes from assemblies using BLAST coordinates
 2. **MSA creation** - Create DNA and protein alignments using MAFFT
 3. **Promoter analysis** - Extract and align non-coding regulatory sequences  
-4. **Conservation plots** - Generate publication-ready conservation visualizations
+4. **Conservation plots** - Generate basic SNP-based conservation visualizations
 5. **BLAST diversity analysis** - Supplementary sequence diversity analysis
 6. **Multi-strategy comparison** - 4 different extraction/alignment strategies for comparison
+7. **Enhanced conservation plots** - Shannon entropy analysis and sequence logos for strategies A, B, D
 
 ### Individual Steps
 ```bash
