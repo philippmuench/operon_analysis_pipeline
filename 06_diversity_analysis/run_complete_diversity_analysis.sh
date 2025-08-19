@@ -134,61 +134,40 @@ else
 fi
 
 ################################################################################
-# STEP 3: COMPREHENSIVE DIVERSITY ANALYSIS (STRATEGIES A, D, AND CORE GENES)
+# STEP 3: VERIFY EXISTING METRICS FROM STEPS 04 AND 05
 ################################################################################
 echo ""
-echo "STEP 3: Comprehensive diversity analysis..."
-echo "=========================================="
+echo "STEP 3: Verifying existing metrics from previous steps..."
+echo "========================================================"
 
-# Strategy A: Prokka-based operon gene analysis
-echo ""
-echo "Analyzing Strategy A (Prokka-based) operon genes..."
-echo "--------------------------------------------------"
-python analyze_diversity.py \
-    --msa_dir output/msa_strategy_a \
-    --output_dir output/diversity_analysis_strategy_a
+# Check for CSV files from step 04 and 05
+CORE_CSV="../04_core_gene_analysis/output/core_gene_conservation_metrics.csv"
+STRATEGY_A_CSV="../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/prokka/msa/operon_conservation_metrics.csv"
+STRATEGY_D_CSV="../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/assemblies/msa/operon_conservation_metrics.csv"
 
-if [ $? -eq 0 ]; then
-    echo "✓ Strategy A diversity analysis completed"
+if [ -f "$CORE_CSV" ]; then
+    core_genes=$(wc -l < "$CORE_CSV")
+    echo "✅ Core gene metrics available: $((core_genes - 1)) genes"
 else
-    echo "⚠️  Strategy A analysis failed, continuing..."
+    echo "⚠️  Core gene metrics not found. Please run step 04 first."
 fi
 
-# Strategy D: Assembly-based operon gene analysis (if available)
-if [ -n "$STRATEGY_D_DIR" ] && [ -d "$STRATEGY_D_DIR" ]; then
-    echo ""
-    echo "Analyzing Strategy D (Assembly-based) operon genes..."
-    echo "---------------------------------------------------"
-    python analyze_diversity.py \
-        --msa_dir output/msa_strategy_d \
-        --output_dir output/diversity_analysis_strategy_d
-
-    if [ $? -eq 0 ]; then
-        echo "✓ Strategy D diversity analysis completed"
-    else
-        echo "⚠️  Strategy D analysis failed, continuing..."
-    fi
+if [ -f "$STRATEGY_A_CSV" ]; then
+    strategy_a_genes=$(wc -l < "$STRATEGY_A_CSV")
+    echo "✅ Strategy A metrics available: $((strategy_a_genes - 1)) genes"
 else
-    echo ""
-    echo "⏭️  Skipping Strategy D analysis (data not available)"
+    echo "⚠️  Strategy A metrics not found. Please run step 05 with Strategy A."
 fi
 
-# Core genes analysis
-echo ""
-echo "Analyzing core genes for baseline comparison..."
-echo "---------------------------------------------"
-python analyze_all_core_genes.py \
-    --core_dir output/core_gene_msa \
-    --output_dir output/core_gene_analysis
-
-if [ $? -eq 0 ]; then
-    echo "✓ Core gene diversity analysis completed"
+if [ -f "$STRATEGY_D_CSV" ]; then
+    strategy_d_genes=$(wc -l < "$STRATEGY_D_CSV")
+    echo "✅ Strategy D metrics available: $((strategy_d_genes - 1)) genes"
 else
-    echo "⚠️  Core gene analysis failed, continuing..."
+    echo "⚠️  Strategy D metrics not found. Please run step 05 with Strategy D."
 fi
 
 echo ""
-echo "✓ Comprehensive diversity analysis completed"
+echo "✓ Using pre-calculated metrics from steps 04 and 05 (no redundant calculations)"
 
 ################################################################################
 # STEP 4: CREATE COMPARATIVE ANALYSIS AND FINAL SUMMARY
@@ -197,19 +176,13 @@ echo ""
 echo "STEP 4: Creating comparative analysis and final summary..."
 echo "--------------------------------------------------------"
 
-# Generate comparative diversity summary
-echo "Creating comparative diversity summary..."
-# Check if required files exist before running summary
-if [ -f "output/core_gene_analysis/core_gene_diversity_results.csv" ] && \
-   [ -f "output/diversity_analysis_strategy_a/diversity_results.csv" ]; then
-    python generate_diversity_summary.py \
-        --core_diversity output/core_gene_analysis/core_gene_diversity_results.csv \
-        --operon_diversity output/diversity_analysis_strategy_a/diversity_results.csv \
-        --dnds_results output/diversity_analysis_strategy_a/diversity_results.csv \
-        --output output/comparative_analysis/strategy_comparison.csv
-else
-    echo "⚠️  Required files not found for comparative summary"
-fi
+# Generate comparative analysis using existing CSV files
+echo "Creating comparative analysis from existing CSV files..."
+python create_comparative_analysis.py \
+    --core-csv ../04_core_gene_analysis/output/core_gene_conservation_metrics.csv \
+    --strategy-a-csv ../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/prokka/msa/operon_conservation_metrics.csv \
+    --strategy-d-csv ../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/assemblies/msa/operon_conservation_metrics.csv \
+    --output-dir output/comparative_analysis
 
 if [ $? -eq 0 ]; then
     echo "✓ Comparative analysis completed"

@@ -434,9 +434,9 @@ fi
 ########## Step 7 ##########
 if [ $START_STEP -le 7 ]; then
     echo ""
-    echo "Step 7: Creating enhanced conservation plots (Shannon entropy + sequence logos)..."
-    echo "=============================================================================="
-    echo "🔍 Generating improved conservation visualizations for all strategies"
+    echo "Step 7: Creating enhanced conservation plots and comprehensive metrics..."
+    echo "======================================================================"
+    echo "🔍 Generating improved conservation visualizations and CSV exports"
     echo ""
     
     # Enhanced plots for Strategy A (Prokka)
@@ -447,6 +447,13 @@ if [ $START_STEP -le 7 ]; then
             --output-dir output/mappings/aa_nt_mapping/prokka/enhanced_plots \
             --title-suffix "Strategy A: aa→nt, Prokka"
         echo "✅ Strategy A enhanced plots completed"
+        
+        echo "Creating enhanced metrics CSV for Strategy A..."
+        python create_enhanced_msa_summary.py \
+            --msa-dir output/mappings/aa_nt_mapping/prokka/msa \
+            --output-file output/mappings/aa_nt_mapping/prokka/msa/operon_conservation_metrics.csv \
+            --strategy-name "Strategy A"
+        echo "✅ Strategy A metrics CSV completed"
     fi
     
     # Enhanced plots for Strategy D (Assemblies)
@@ -458,6 +465,13 @@ if [ $START_STEP -le 7 ]; then
             --output-dir output/mappings/aa_nt_mapping/assemblies/enhanced_plots \
             --title-suffix "Strategy D: aa→nt, Assemblies"
         echo "✅ Strategy D enhanced plots completed"
+        
+        echo "Creating enhanced metrics CSV for Strategy D..."
+        python create_enhanced_msa_summary.py \
+            --msa-dir output/mappings/aa_nt_mapping/assemblies/msa \
+            --output-file output/mappings/aa_nt_mapping/assemblies/msa/operon_conservation_metrics.csv \
+            --strategy-name "Strategy D"
+        echo "✅ Strategy D metrics CSV completed"
     fi
     
     # Enhanced plots for Strategy B (nt→nt Prokka)
@@ -469,6 +483,13 @@ if [ $START_STEP -le 7 ]; then
             --output-dir output/mappings/nt_nt_mapping/prokka_genome/enhanced_plots \
             --title-suffix "Strategy B: nt→nt, Prokka"
         echo "✅ Strategy B enhanced plots completed"
+        
+        echo "Creating enhanced metrics CSV for Strategy B..."
+        python create_enhanced_msa_summary.py \
+            --msa-dir output/mappings/nt_nt_mapping/prokka_genome/msa \
+            --output-file output/mappings/nt_nt_mapping/prokka_genome/msa/operon_conservation_metrics.csv \
+            --strategy-name "Strategy B"
+        echo "✅ Strategy B metrics CSV completed"
     fi
     
     echo ""
