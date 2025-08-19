@@ -310,18 +310,14 @@ fi
 # ########## Step 6 ##########
 if [ $START_STEP -le 6 ]; then
     echo ""
-    echo "Step 6: Running multi-strategy MSA comparison (reproduce old vs new alignments)"
-    echo "============================================================================="
-    bash run_multi_strategy_pipeline.sh
-
-    if [ $? -eq 0 ]; then
-        echo "✅ Multi-strategy MSAs and plots completed"
-        echo "   See: output/mappings/{aa_nt_mapping,nt_nt_mapping}/..."
-    else
-        echo "⚠️  Warning: Multi-strategy pipeline failed"
-    fi
+    echo "Step 6: Multi-strategy comparison (currently disabled)"
+    echo "====================================================="
+    echo "ℹ️  Multi-strategy pipeline disabled to avoid redundant BLAST operations"
+    echo "   Main analysis uses BLAST results from ../03_blast_search/ (recommended)"
+    echo "   For comparison analysis, run multi-strategy scripts manually if needed"
+    echo "✅ Skipping multi-strategy comparison"
 else
-    echo "⏭️  Skipping Step 6: Multi-strategy MSAs"
+    echo "⏭️  Skipping Step 6: Multi-strategy comparison"
 fi
 
 # Generate summary
