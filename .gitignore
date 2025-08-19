@@ -1,17 +1,23 @@
-# Ignore output directories and data files
+# Ignore output directories and data files - but allow specific plot and summary files
 */output/
 */results/
 *.fasta
 *.fna
-*.csv
 *.txt
-*.png
-*.jpg
-*.jpeg
-*.pdf
 *.log
 *.out
 *.err
+
+# Allow specific visualization and summary files
+!*/output/mappings/*/*/plots/*.png
+!*/output/mappings/*/*/enhanced_plots/*.png
+!*/output/mappings/*/*/msa/*summary*.csv
+!*/output/*summary*.txt
+!*/plots/*.png
+
+# Allow manuscript and documentation
+!manuscript.md
+!README.md
 CLAUDE.md
 test_*.py
 __pycache__/

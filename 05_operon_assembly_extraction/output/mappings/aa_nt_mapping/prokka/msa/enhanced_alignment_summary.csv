@@ -1,0 +1,9 @@
+gene,type,n_sequences,alignment_length,avg_original_length,min_original_length,max_original_length,alignment_file
+frpC,coding,7958,1002,1001.59,171,1002,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/frpC_aligned.fasta
+ptsD,coding,7958,832,830.75,90,831,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/ptsD_aligned.fasta
+fruR,coding,7958,2774,2763.19,309,2769,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/fruR_aligned.fasta
+ptsB,coding,7958,469,468.0,468,468,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/ptsB_aligned.fasta
+ptsA,coding,7958,462,461.97,453,462,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/ptsA_aligned.fasta
+glpC,coding,7958,1074,1072.59,111,1074,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/glpC_aligned.fasta
+ptsC,coding,7958,789,770.92,324,771,output/mappings/aa_nt_mapping/prokka/msa/dna_alignments/ptsC_aligned.fasta
+promoter,noncoding,8286,579,567.3,214,572,output/mappings/aa_nt_mapping/prokka/msa/noncoding_alignments/promoter_aligned.fasta
