@@ -15,8 +15,6 @@
 # Parse command line arguments
 START_STEP=1
 HELP=false
-# Default: run all strategies
-STRATEGIES="current,nt_vs_genome,prokka_variants,assemblies"
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -24,8 +22,7 @@ usage() {
     echo "Operon Sequence Extraction Pipeline"
     echo ""
     echo "Options:"
-    echo "  --start-step STEP    Start pipeline from specific step (1-5, default: 1)"
-    echo "  --strategies LIST    Comma-separated: current,nt_vs_genome,prokka_variants,assemblies (default: current)"
+    echo "  --start-step STEP    Start pipeline from specific step (1-6, default: 1)"
     echo "  --help               Show this help message"
     echo ""
     echo "Available steps:"
@@ -34,22 +31,18 @@ usage() {
     echo "  3. Extract promoter sequences and create promoter MSA"
     echo "  4. Create conservation plots (genes and enhanced promoter plots)"
     echo "  5. BLAST-based diversity analysis (supplementary) and summary"
-    echo "  6. Run multi-strategy MSAs (nt-vs-nt, tblastn, Prokka .ffn variants) and plots"
+    echo "  6. Multi-strategy comparison (4 strategies using existing BLAST results)"
     echo ""
     echo "Examples:"
-    echo "  $0                                      # Run complete pipeline (current strategy)"
-    echo "  $0 --strategies current,prokka_variants  # Run current + old-look variants in one go"
-    echo "  $0 --start-step 3                       # Start from promoter extraction and MSA"
+    echo "  $0                      # Run complete pipeline (all 6 steps)"
+    echo "  $0 --start-step 3       # Start from promoter extraction and MSA"
+    echo "  $0 --start-step 6       # Run only multi-strategy comparison"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --start-step)
             START_STEP="$2"
-            shift 2
-            ;;
-        --strategies)
-            STRATEGIES="$2"
             shift 2
             ;;
         --help)
@@ -70,8 +63,8 @@ if [ "$HELP" = true ]; then
 fi
 
 # Validate start step
-if ! [[ "$START_STEP" =~ ^[1-5]$ ]]; then
-    echo "❌ Error: Invalid start step '$START_STEP'. Must be 1-5."
+if ! [[ "$START_STEP" =~ ^[1-6]$ ]]; then
+    echo "❌ Error: Invalid start step '$START_STEP'. Must be 1-6."
     usage
     exit 1
 fi
@@ -81,7 +74,6 @@ echo "Operon Sequence Extraction Pipeline"
 echo "Started: $(date)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Starting from step: $START_STEP"
-echo "Strategies: $STRATEGIES"
 echo "=================================================="
 
 # Change to script directory
@@ -310,12 +302,128 @@ fi
 # ########## Step 6 ##########
 if [ $START_STEP -le 6 ]; then
     echo ""
-    echo "Step 6: Multi-strategy comparison (currently disabled)"
-    echo "====================================================="
-    echo "ℹ️  Multi-strategy pipeline disabled to avoid redundant BLAST operations"
-    echo "   Main analysis uses BLAST results from ../03_blast_search/ (recommended)"
-    echo "   For comparison analysis, run multi-strategy scripts manually if needed"
-    echo "✅ Skipping multi-strategy comparison"
+    echo "Step 6: Multi-strategy extraction comparison using existing BLAST results"
+    echo "======================================================================="
+    echo "🔍 Running multiple extraction strategies for comparison analysis"
+    echo "   Using pre-computed BLAST results from ../03_blast_search/"
+    echo ""
+    
+    # Create multi-strategy output directories
+    mkdir -p output/mappings/aa_nt_mapping/{prokka,assemblies}
+    mkdir -p output/mappings/nt_nt_mapping/{prokka_genome,prokka_variants}
+    
+    THREADS=${SLURM_CPUS_PER_TASK:-8}
+    
+    # Strategy A: tblastn (aa→nt) using Prokka genomes (same as steps 1-2, but organized differently)
+    echo "=== Strategy A: tblastn (aa→nt) using Prokka genomes ==="
+    python extract_operon_sequences.py \
+        --prokka_dir ../01_prokka_annotation/output/prokka_results \
+        --blast_dir ../03_blast_search/output/blast_results \
+        --output_dir output/mappings/aa_nt_mapping/prokka/sequences \
+        --min_identity 90 --min_coverage 80 --source prokka
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Strategy A: Sequence extraction completed"
+        python create_msa.py \
+            --coding-sequences output/mappings/aa_nt_mapping/prokka/sequences \
+            --output-dir output/mappings/aa_nt_mapping/prokka/msa \
+            --threads "$THREADS"
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Strategy A: MSA creation completed"
+            python create_gene_conservation_plots.py \
+                --msa-dir output/mappings/aa_nt_mapping/prokka/msa/dna_alignments \
+                --output-dir output/mappings/aa_nt_mapping/prokka/plots \
+                --title-suffix "aa_vs_nt; source=prokka"
+            echo "✅ Strategy A: Conservation plots completed"
+        fi
+    fi
+    
+    # Strategy B: blastn (nt→nt) Prokka genomes using existing nt blast results
+    echo ""
+    echo "=== Strategy B: blastn (nt→nt) using Prokka genomes ==="
+    python extract_operon_sequences.py \
+        --prokka_dir ../01_prokka_annotation/output/prokka_results \
+        --blast_dir ../03_blast_search/output/blast_results_nt \
+        --output_dir output/mappings/nt_nt_mapping/prokka_genome/sequences \
+        --min_identity 90 --min_coverage 80 --source prokka
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Strategy B: Sequence extraction completed"
+        python create_msa.py \
+            --coding-sequences output/mappings/nt_nt_mapping/prokka_genome/sequences \
+            --output-dir output/mappings/nt_nt_mapping/prokka_genome/msa \
+            --threads "$THREADS"
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Strategy B: MSA creation completed"
+            python create_gene_conservation_plots.py \
+                --msa-dir output/mappings/nt_nt_mapping/prokka_genome/msa/dna_alignments \
+                --output-dir output/mappings/nt_nt_mapping/prokka_genome/plots \
+                --title-suffix "nt_vs_nt; source=prokka_genome"
+            echo "✅ Strategy B: Conservation plots completed"
+        fi
+    fi
+    
+    # Strategy C: blastn Prokka variants using existing prokka_variants blast results
+    echo ""
+    echo "=== Strategy C: blastn Prokka variants (qseq extraction) ==="
+    python create_msa_variants_from_blast.py \
+        --blast-dir ../03_blast_search/output/blast_results_prokka_variants \
+        --output-dir output/mappings/nt_nt_mapping/prokka_variants \
+        --threads "$THREADS"
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Strategy C: Variant MSA creation completed"
+        python create_gene_conservation_plots.py \
+            --msa-dir output/mappings/nt_nt_mapping/prokka_variants/msa_variants \
+            --output-dir output/mappings/nt_nt_mapping/prokka_variants/plots \
+            --title-suffix "nt_vs_nt; source=prokka_variants"
+        echo "✅ Strategy C: Conservation plots completed"
+    fi
+    
+    # Strategy D: tblastn (aa→nt) with direct assemblies extraction
+    echo ""
+    echo "=== Strategy D: tblastn (aa→nt) using raw assemblies ==="
+    python extract_operon_sequences.py \
+        --prokka_dir ../01_prokka_annotation/output/prokka_results \
+        --blast_dir ../03_blast_search/output/blast_results \
+        --output_dir output/mappings/aa_nt_mapping/assemblies/sequences \
+        --min_identity 90 --min_coverage 80 --source assemblies \
+        --assemblies_dir ../Efs_assemblies
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Strategy D: Sequence extraction completed"
+        python create_msa.py \
+            --coding-sequences output/mappings/aa_nt_mapping/assemblies/sequences \
+            --output-dir output/mappings/aa_nt_mapping/assemblies/msa \
+            --threads "$THREADS"
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Strategy D: MSA creation completed"
+            python create_gene_conservation_plots.py \
+                --msa-dir output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments \
+                --output-dir output/mappings/aa_nt_mapping/assemblies/plots \
+                --title-suffix "aa_vs_nt; source=assemblies"
+            echo "✅ Strategy D: Conservation plots completed"
+        fi
+    fi
+    
+    echo ""
+    echo "📊 Multi-strategy extraction completed!"
+    echo "   Results organized under output/mappings/{aa_nt_mapping,nt_nt_mapping}/"
+    
+    # Count multi-strategy results
+    STRATEGY_A_FILES=$(find output/mappings/aa_nt_mapping/prokka/sequences -name "*.fasta" 2>/dev/null | wc -l)
+    STRATEGY_B_FILES=$(find output/mappings/nt_nt_mapping/prokka_genome/sequences -name "*.fasta" 2>/dev/null | wc -l)
+    STRATEGY_C_FILES=$(find output/mappings/nt_nt_mapping/prokka_variants -name "*.fa" 2>/dev/null | wc -l)
+    STRATEGY_D_FILES=$(find output/mappings/aa_nt_mapping/assemblies/sequences -name "*.fasta" 2>/dev/null | wc -l)
+    
+    echo "   Strategy A (aa→nt, Prokka): $STRATEGY_A_FILES files"
+    echo "   Strategy B (nt→nt, Prokka): $STRATEGY_B_FILES files"
+    echo "   Strategy C (nt→nt, variants): $STRATEGY_C_FILES files"
+    echo "   Strategy D (aa→nt, assemblies): $STRATEGY_D_FILES files"
+    
 else
     echo "⏭️  Skipping Step 6: Multi-strategy comparison"
 fi
@@ -351,12 +459,14 @@ echo "   - BLAST analysis results: $TOTAL_BLAST_RESULTS"
 
 echo ""
 echo "📁 Output directories:"
-echo "   - output/sequences/                 (extracted gene sequences)"
-echo "   - output/msa/dna_alignments/        (DNA MSAs)"
-echo "   - output/msa/protein_alignments/    (protein MSAs)"
-echo "   - output/msa/noncoding_alignments/  (promoter MSAs)"
-echo "   - output/plots/                     (conservation plots)"
-echo "   - output/diversity_analysis/        (BLAST analysis results)"
+echo "   - output/sequences/                          (extracted gene sequences)"
+echo "   - output/msa/dna_alignments/                 (DNA MSAs)"
+echo "   - output/msa/protein_alignments/             (protein MSAs)"
+echo "   - output/msa/noncoding_alignments/           (promoter MSAs)"
+echo "   - output/plots/                              (conservation plots)"
+echo "   - output/diversity_analysis/                 (BLAST analysis results)"
+echo "   - output/mappings/aa_nt_mapping/             (multi-strategy: aa→nt)"
+echo "   - output/mappings/nt_nt_mapping/             (multi-strategy: nt→nt)"
 
 # Create pipeline summary file
 SUMMARY_FILE="output/extraction_pipeline_summary.txt"

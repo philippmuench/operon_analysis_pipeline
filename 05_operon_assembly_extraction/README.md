@@ -106,32 +106,40 @@ Enhanced promoter plotting with Pribnow box annotation.
 ## Usage
 
 ### SLURM (HPC) submission
-Submit the full step via SLURM (defaults to ALL strategies):
+Submit the full pipeline (all 6 steps):
 
 ```bash
-sbatch 05_operon_assembly_extraction/run_operon_extraction.sh
+sbatch run_operon_extraction.sh
 ```
 
-Override resources if needed (examples):
+Override resources if needed:
 
 ```bash
-sbatch -c 32 --mem=48G --time=12:00:00 05_operon_assembly_extraction/run_operon_extraction.sh
+sbatch -c 32 --mem=48G --time=12:00:00 run_operon_extraction.sh
 ```
 
 Monitor job and logs:
 
 ```bash
 squeue -j <JOBID>
-tail -f 05_operon_assembly_extraction/operon_extraction_<JOBID>.out
+tail -f operon_extraction_<JOBID>.out
 ```
 
-### Strategy selection (optional)
-By default, all strategies run: `current, nt_vs_genome, prokka_variants, assemblies`.
-To restrict strategies:
+### Step-by-step execution
+Start from a specific step:
 
 ```bash
-sbatch 05_operon_assembly_extraction/run_operon_extraction.sh --strategies current,prokka_variants
+sbatch run_operon_extraction.sh --start-step 3    # Start from promoter analysis
+sbatch run_operon_extraction.sh --start-step 6    # Run only multi-strategy comparison
 ```
+
+### Pipeline Steps
+1. **Gene sequence extraction** - Extract operon genes from assemblies using BLAST coordinates
+2. **MSA creation** - Create DNA and protein alignments using MAFFT
+3. **Promoter analysis** - Extract and align non-coding regulatory sequences  
+4. **Conservation plots** - Generate publication-ready conservation visualizations
+5. **BLAST diversity analysis** - Supplementary sequence diversity analysis
+6. **Multi-strategy comparison** - 4 different extraction/alignment strategies for comparison
 
 ### Individual Steps
 ```bash

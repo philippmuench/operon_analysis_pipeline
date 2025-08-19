@@ -82,9 +82,10 @@ operon_analysis/
 - **Modular design**: Each step can be run independently
 - **Test mode**: Process 50 genomes for testing
 - **SLURM support**: Optimized for HPC clusters
-- **Dual BLAST strategy**: 
-  - tblastn for protein-coding genes
-  - blastn for regulatory elements
+- **Multi-strategy BLAST approaches**: 
+  - tblastn (protein→nucleotide) for protein-coding genes
+  - blastn (nucleotide→nucleotide) for regulatory elements
+  - Multiple extraction strategies for robust comparison
 
 ## Target Operon
 
