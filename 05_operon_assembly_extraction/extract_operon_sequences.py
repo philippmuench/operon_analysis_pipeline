@@ -90,16 +90,25 @@ def _find_fna_file(prokka_dir: str, genome_id: str):
 def _find_assembly_fasta(assemblies_dir: str, genome_id: str):
     """Return path to the raw assembly FASTA for a given genome_id.
 
-    Tries exact filenames only:
-    - {assemblies_dir}/{genome_id}.result.fasta.gz
-    - {assemblies_dir}/{genome_id}.result.fasta
+    Tries exact filenames only, matching the provided genome_id without
+    altering it (genome_id already includes potential suffixes like
+    '.result'):
+    - {assemblies_dir}/{genome_id}.fasta.gz
+    - {assemblies_dir}/{genome_id}.fasta
     """
     if not assemblies_dir:
         return None
     candidates = [
-        os.path.join(assemblies_dir, f"{genome_id}.result.fasta.gz"),
-        os.path.join(assemblies_dir, f"{genome_id}.result.fasta"),
+        os.path.join(assemblies_dir, f"{genome_id}.fasta.gz"),
+        os.path.join(assemblies_dir, f"{genome_id}.fasta"),
     ]
+    # Backward-compatible fallbacks if callers passed a genome_id without
+    # the '.result' suffix but assemblies are stored with it
+    if not genome_id.endswith('.result'):
+        candidates.extend([
+            os.path.join(assemblies_dir, f"{genome_id}.result.fasta.gz"),
+            os.path.join(assemblies_dir, f"{genome_id}.result.fasta"),
+        ])
     for cand in candidates:
         if os.path.exists(cand):
             return cand
@@ -232,8 +241,12 @@ def extract_sequences(prokka_dir, blast_results_dir, output_dir, min_identity=90
         sys.stdout.flush()
     
     # Write sequences to files
+    # Ensure output directory still exists before writing (extra safety in case it was removed mid-run)
+    os.makedirs(output_dir, exist_ok=True)
     for gene, seqs in gene_sequences.items():
         output_file = os.path.join(output_dir, f"{gene}.fasta")
+        # Double-check parent directory exists (handles unusual path configurations)
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with open(output_file, 'w') as f:
             for seq_info in seqs:
                 f.write(f">{seq_info['genome_id']}\n{seq_info['sequence']}\n")

@@ -25,8 +25,8 @@ def analyze_blast_extraction_results():
         "identity_distribution": [],
         "coverage_distribution": [],
         "extraction_thresholds": {
-            "min_identity": 30.0,  # Based on script analysis
-            "min_coverage": 50.0
+            "min_identity": 90.0,  # Current pipeline threshold
+            "min_coverage": 80.0   # Current pipeline threshold
         }
     }
     
@@ -53,7 +53,7 @@ def analyze_blast_extraction_results():
                             stats["identity_distribution"].append(identity)
                             stats["coverage_distribution"].append(coverage)
                             
-                            if identity >= 30.0 and coverage >= 50.0:
+                            if identity >= 90.0 and coverage >= 80.0:
                                 stats["high_quality_hits"] += 1
         except:
             continue
@@ -79,7 +79,9 @@ def analyze_extracted_sequences():
     output_dirs = [
         "output/sequences",
         "output/mappings/aa_nt_mapping/prokka/sequences",
-        "output/mappings/nt_nt_mapping/prokka_genome/sequences"
+        "output/mappings/aa_nt_mapping/assemblies/sequences",
+        "output/mappings/nt_nt_mapping/prokka_genome/sequences",
+        "output/mappings/nt_nt_mapping/prokka_variants"
     ]
     
     stats = {
@@ -93,7 +95,7 @@ def analyze_extracted_sequences():
     for seq_dir in output_dirs:
         if os.path.exists(seq_dir):
             stats["extraction_strategies"] += 1
-            fasta_files = glob.glob(os.path.join(seq_dir, "*.fa"))
+            fasta_files = glob.glob(os.path.join(seq_dir, "*.fasta")) + glob.glob(os.path.join(seq_dir, "*.fa"))
             
             for fasta_file in fasta_files:
                 gene_name = os.path.basename(fasta_file).replace(".fa", "")
@@ -136,7 +138,10 @@ def analyze_msa_results():
     msa_dirs = [
         "output/msa/dna_alignments",
         "output/msa/noncoding_alignments",
-        "output/mappings/aa_nt_mapping/prokka/msa/dna_alignments"
+        "output/mappings/aa_nt_mapping/prokka/msa/dna_alignments",
+        "output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments",
+        "output/mappings/nt_nt_mapping/prokka_genome/msa/dna_alignments",
+        "output/mappings/nt_nt_mapping/prokka_variants/msa_variants"
     ]
     
     stats = {
@@ -151,7 +156,7 @@ def analyze_msa_results():
     
     for msa_dir in msa_dirs:
         if os.path.exists(msa_dir):
-            alignment_files = glob.glob(os.path.join(msa_dir, "*.fa"))
+            alignment_files = glob.glob(os.path.join(msa_dir, "*.fasta")) + glob.glob(os.path.join(msa_dir, "*.fa"))
             
             for alignment_file in alignment_files:
                 try:
@@ -185,7 +190,9 @@ def analyze_conservation_plots():
     plot_dirs = [
         "output/plots",
         "output/mappings/aa_nt_mapping/prokka/plots",
-        "output/mappings/nt_nt_mapping/prokka_genome/plots"
+        "output/mappings/aa_nt_mapping/assemblies/plots",
+        "output/mappings/nt_nt_mapping/prokka_genome/plots",
+        "output/mappings/nt_nt_mapping/prokka_variants/plots"
     ]
     
     stats = {
@@ -256,7 +263,7 @@ def generate_manuscript_stats():
         print(f"   High-quality hits extracted: {blast_stats['high_quality_hits']:,}")
         if blast_stats['total_hits'] > 0:
             print(f"   Extraction success rate: {blast_stats.get('high_quality_rate', 0):.1f}%")
-        print(f"   Quality thresholds: ≥{blast_stats['extraction_thresholds']['min_identity']}% identity, ≥{blast_stats['extraction_thresholds']['min_coverage']}% coverage")
+        print(f"   Quality thresholds: ≥{blast_stats['extraction_thresholds']['min_identity']:.0f}% identity, ≥{blast_stats['extraction_thresholds']['min_coverage']:.0f}% coverage")
         if blast_stats.get('mean_identity'):
             print(f"   Mean sequence identity: {blast_stats['mean_identity']:.1f}%")
             print(f"   Mean query coverage: {blast_stats['mean_coverage']:.1f}%")
@@ -312,7 +319,7 @@ def generate_manuscript_stats():
     if "error" not in blast_stats and blast_stats['total_hits'] > 0:
         print(f"BLAST hits processed: {blast_stats['total_hits']:,}")
         print(f"High-quality sequences extracted: {blast_stats['high_quality_hits']:,}")
-        print(f"Quality thresholds: ≥30% identity, ≥50% coverage")
+        print(f"Quality thresholds: ≥90% identity, ≥80% coverage")
     
     if seq_stats.get('avg_sequences_per_gene'):
         print(f"Average sequences per gene: {seq_stats['avg_sequences_per_gene']:.0f}")

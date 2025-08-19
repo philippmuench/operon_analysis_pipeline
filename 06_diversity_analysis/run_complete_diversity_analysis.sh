@@ -48,182 +48,223 @@ THREADS=${SLURM_CPUS_PER_TASK:-4}
 echo "Using $THREADS threads"
 
 ################################################################################
-# STEP 1: EXTRACT CODING GENE SEQUENCES (FIXED PROKKA PATHS)
+# STEP 1: VERIFY EXISTING MSA DATA FROM PREVIOUS STEPS
 ################################################################################
 echo ""
-echo "STEP 1: Extracting coding gene sequences..."
-echo "----------------------------------------"
-python extract_operon_sequences.py \
-    --prokka_dir ../01_prokka_annotation/output/prokka_results \
-    --blast_dir ../03_blast_search/output/blast_results \
-    --output_dir output/operon_sequences \
-    --min_identity 90 \
-    --min_coverage 80
+echo "STEP 1: Verifying existing MSA data from previous steps..."
+echo "--------------------------------------------------------"
 
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to extract coding sequences"
-    exit 1
-fi
+# Check Strategy A (Prokka-based) MSAs
+STRATEGY_A_DIR="../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/prokka/msa/dna_alignments"
+STRATEGY_D_DIR="../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments"
+CORE_GENE_DIR="../04_core_gene_analysis/output/core_gene_alignments"
 
-# Count extracted sequences
-if [ -d "output/operon_sequences" ]; then
-    gene_count=$(ls output/operon_sequences/*.fasta 2>/dev/null | wc -l)
-    echo "✓ Extracted sequences for $gene_count genes"
-fi
-
-# Also run BLAST-based analysis for comparison
-echo "Running BLAST-based analysis for comparison..."
-python extract_sequences_from_blast.py \
-    --blast-csv ../03_blast_search/output/all_blast_hits_complete.csv \
-    --output-dir output/diversity_analysis \
-    --min-identity 90 \
-    --min-coverage 80 \
-    --analysis-only
-
-echo "✓ Both sequence extraction and BLAST-based analysis completed"
-
-################################################################################
-# STEP 2: ANALYZE PROMOTER CONSERVATION FROM BLAST DATA
-################################################################################
-echo ""
-echo "STEP 2: Analyzing promoter conservation from BLAST results..."
-echo "-----------------------------------------------------------"
-python create_promoter_msa_from_blast.py \
-    --blast-dir ../03_blast_search/output/blast_results \
-    --output-dir output/diversity_analysis
-
-if [ $? -ne 0 ]; then
-    echo "Warning: Promoter analysis failed, continuing..."
+echo "Checking Strategy A (Prokka-based) MSAs..."
+if [ -d "$STRATEGY_A_DIR" ]; then
+    strategy_a_count=$(ls "$STRATEGY_A_DIR"/*_aligned.fasta 2>/dev/null | wc -l)
+    echo "✓ Found $strategy_a_count Strategy A operon gene MSAs"
 else
-    echo "✓ Promoter conservation analysis completed"
-fi
-
-################################################################################
-# STEP 3: CREATE MULTIPLE SEQUENCE ALIGNMENTS
-################################################################################
-echo ""
-echo "STEP 3: Creating multiple sequence alignments..."
-echo "----------------------------------------------"
-
-# Create MSAs for coding sequences
-echo "Creating MSAs for coding genes..."
-python create_msa.py \
-    --sequences-dir output/operon_sequences \
-    --output-dir output/msa \
-    --threads $THREADS
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to create coding sequence alignments"
+    echo "❌ Strategy A MSAs not found at $STRATEGY_A_DIR"
     exit 1
 fi
 
-# Count created alignments
-coding_alignments=$(ls output/msa/dna_alignments/*_aligned.fasta 2>/dev/null | wc -l)
-echo "✓ Created $coding_alignments coding sequence alignments"
+echo "Checking Strategy D (Assembly-based) MSAs..."
+if [ -d "$STRATEGY_D_DIR" ]; then
+    strategy_d_count=$(ls "$STRATEGY_D_DIR"/*_aligned.fasta 2>/dev/null | wc -l)
+    echo "✓ Found $strategy_d_count Strategy D operon gene MSAs"
+else
+    echo "⚠️  Strategy D MSAs not found at $STRATEGY_D_DIR - may need to complete Step 05"
+    echo "   Continuing with Strategy A only..."
+    STRATEGY_D_DIR=""
+fi
+
+echo "Checking core gene MSAs..."
+if [ -d "$CORE_GENE_DIR" ]; then
+    core_gene_count=$(ls "$CORE_GENE_DIR"/*.fasta 2>/dev/null | wc -l)
+    echo "✓ Found $core_gene_count core gene MSAs"
+else
+    echo "❌ Core gene MSAs not found at $CORE_GENE_DIR"
+    exit 1
+fi
+
+# Create symbolic links to existing data for compatibility
+echo ""
+echo "Creating symbolic links to existing MSA data..."
+mkdir -p output/msa_strategy_a/dna_alignments
+mkdir -p output/msa_strategy_d/dna_alignments
+mkdir -p output/core_gene_msa
+
+# Link Strategy A MSAs
+ln -sf "$(realpath $STRATEGY_A_DIR)"/* output/msa_strategy_a/dna_alignments/ 2>/dev/null || true
+
+# Link Strategy D MSAs if available
+if [ -n "$STRATEGY_D_DIR" ] && [ -d "$STRATEGY_D_DIR" ]; then
+    ln -sf "$(realpath $STRATEGY_D_DIR)"/* output/msa_strategy_d/dna_alignments/ 2>/dev/null || true
+fi
+
+# Link core gene MSAs
+ln -sf "$(realpath $CORE_GENE_DIR)"/* output/core_gene_msa/ 2>/dev/null || true
+
+echo "✓ Data preparation completed using existing high-quality MSAs"
 
 ################################################################################
-# STEP 4: ANALYZE SEQUENCE DIVERSITY AND CREATE CONSERVATION PLOTS
+# STEP 2: ANALYZE PROMOTER CONSERVATION FROM EXISTING DATA
 ################################################################################
 echo ""
-echo "STEP 4: Analyzing sequence diversity and creating conservation plots..."
+echo "STEP 2: Using promoter conservation from existing operon extraction..."
 echo "--------------------------------------------------------------------"
 
-# Run diversity analysis with conservation plots
-echo "Analyzing coding gene diversity..."
-python analyze_diversity.py \
-    --msa_dir output/msa \
-    --output_dir output/diversity_analysis
+# Use existing promoter MSAs from Step 05
+PROMOTER_A_DIR="../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/prokka/msa/noncoding_alignments"
+PROMOTER_D_DIR="../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/assemblies/msa/noncoding_alignments"
 
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to analyze coding gene diversity"
-    exit 1
-fi
+mkdir -p output/promoter_msa
 
-echo "✓ Conservation plots and diversity analysis completed"
-
-################################################################################
-# STEP 5: CREATE GAP ANALYSIS PLOTS
-################################################################################
-echo ""
-echo "STEP 5: Creating gap analysis plots..."
-echo "------------------------------------"
-python create_gap_analysis.py \
-    --output-dir output/diversity_analysis
-
-if [ $? -ne 0 ]; then
-    echo "Warning: Gap analysis failed, continuing..."
+if [ -d "$PROMOTER_A_DIR" ]; then
+    ln -sf "$(realpath $PROMOTER_A_DIR)"/* output/promoter_msa/ 2>/dev/null || true
+    echo "✓ Linked Strategy A promoter MSAs"
+elif [ -d "$PROMOTER_D_DIR" ]; then
+    ln -sf "$(realpath $PROMOTER_D_DIR)"/* output/promoter_msa/ 2>/dev/null || true
+    echo "✓ Linked Strategy D promoter MSAs"
 else
-    echo "✓ Gap analysis completed"
+    echo "⚠️  No promoter MSAs found - running BLAST-based analysis as fallback..."
+    python create_promoter_msa_from_blast.py \
+        --blast-dir ../03_blast_search/output/blast_results \
+        --output-dir output/diversity_analysis
 fi
 
 ################################################################################
-# STEP 6: GENERATE FINAL SUMMARY
+# STEP 3: COMPREHENSIVE DIVERSITY ANALYSIS (STRATEGIES A, D, AND CORE GENES)
 ################################################################################
 echo ""
-echo "STEP 5: Generating final summary..."
-echo "---------------------------------"
+echo "STEP 3: Comprehensive diversity analysis..."
+echo "=========================================="
+
+# Strategy A: Prokka-based operon gene analysis
+echo ""
+echo "Analyzing Strategy A (Prokka-based) operon genes..."
+echo "--------------------------------------------------"
+python analyze_diversity.py \
+    --msa_dir output/msa_strategy_a \
+    --output_dir output/diversity_analysis_strategy_a
+
+if [ $? -eq 0 ]; then
+    echo "✓ Strategy A diversity analysis completed"
+else
+    echo "⚠️  Strategy A analysis failed, continuing..."
+fi
+
+# Strategy D: Assembly-based operon gene analysis (if available)
+if [ -n "$STRATEGY_D_DIR" ] && [ -d "$STRATEGY_D_DIR" ]; then
+    echo ""
+    echo "Analyzing Strategy D (Assembly-based) operon genes..."
+    echo "---------------------------------------------------"
+    python analyze_diversity.py \
+        --msa_dir output/msa_strategy_d \
+        --output_dir output/diversity_analysis_strategy_d
+
+    if [ $? -eq 0 ]; then
+        echo "✓ Strategy D diversity analysis completed"
+    else
+        echo "⚠️  Strategy D analysis failed, continuing..."
+    fi
+else
+    echo ""
+    echo "⏭️  Skipping Strategy D analysis (data not available)"
+fi
+
+# Core genes analysis
+echo ""
+echo "Analyzing core genes for baseline comparison..."
+echo "---------------------------------------------"
+python analyze_all_core_genes.py \
+    --core_dir output/core_gene_msa \
+    --output_dir output/core_gene_analysis
+
+if [ $? -eq 0 ]; then
+    echo "✓ Core gene diversity analysis completed"
+else
+    echo "⚠️  Core gene analysis failed, continuing..."
+fi
+
+echo ""
+echo "✓ Comprehensive diversity analysis completed"
+
+################################################################################
+# STEP 4: CREATE COMPARATIVE ANALYSIS AND FINAL SUMMARY
+################################################################################
+echo ""
+echo "STEP 4: Creating comparative analysis and final summary..."
+echo "--------------------------------------------------------"
+
+# Generate comparative diversity summary
+echo "Creating comparative diversity summary..."
+python generate_diversity_summary.py \
+    --strategy_a_dir output/diversity_analysis_strategy_a \
+    --strategy_d_dir output/diversity_analysis_strategy_d \
+    --core_gene_dir output/core_gene_analysis \
+    --output_dir output/comparative_analysis
+
+if [ $? -eq 0 ]; then
+    echo "✓ Comparative analysis completed"
+else
+    echo "⚠️  Comparative analysis failed, showing individual results..."
+fi
+
+# Create gap analysis for all strategies
+echo ""
+echo "Creating gap analysis for all datasets..."
+python create_gap_analysis.py \
+    --output-dir output/comparative_analysis
+
+################################################################################
+# STEP 5: GENERATE COMPREHENSIVE FINAL SUMMARY
+################################################################################
+echo ""
+echo "STEP 5: Generating comprehensive final summary..."
+echo "-----------------------------------------------"
 
 # Count final outputs
-echo "Final Output Summary:"
-echo "===================="
-
-if [ -d "output/diversity_analysis" ]; then
-    png_count=$(ls output/diversity_analysis/*.png 2>/dev/null | wc -l)
-    csv_count=$(ls output/diversity_analysis/*.csv 2>/dev/null | wc -l)
-    echo "  📊 Plots created: $png_count PNG files"
-    echo "  📋 Data files: $csv_count CSV files"
-    echo ""
-    echo "Key output files:"
-    echo "  - output/diversity_analysis/diversity_results.csv"
-    echo "  - output/diversity_analysis/conservation_profiles.png"
-    echo "  - output/diversity_analysis/promoter_conservation_profile.png"
-    echo "  - output/diversity_analysis/gap_analysis_summary.png"
-    echo "  - output/diversity_analysis/*_gap_profile.png"
-fi
-
-# Display diversity results summary
-if [ -f "output/diversity_analysis/blast_based_diversity_results.csv" ]; then
-    echo ""
-    echo "BLAST-Based Diversity Results:"
-    echo "============================="
-    python -c "
-import pandas as pd
-import os
-
-if os.path.exists('output/diversity_analysis/blast_based_diversity_results.csv'):
-    df = pd.read_csv('output/diversity_analysis/blast_based_diversity_results.csv')
-    print(f'Genes analyzed: {len(df)}')
-    print(f'Average identity: {df[\"avg_identity\"].mean():.2f}%')
-    print(f'Identity range: {df[\"min_identity\"].min():.2f}% - {df[\"max_identity\"].max():.2f}%')
-    print(f'Average coverage: {df[\"avg_coverage\"].mean():.1f}%')
-    
-    print(f'\\nMost conserved gene: {df.loc[df[\"avg_identity\"].idxmax(), \"gene\"]} ({df[\"avg_identity\"].max():.2f}%)')
-    print(f'Least conserved gene: {df.loc[df[\"avg_identity\"].idxmin(), \"gene\"]} ({df[\"avg_identity\"].min():.2f}%)')
-"
-fi
-
-# Check promoter analysis
 echo ""
-echo "Promoter Analysis Summary:"
-echo "========================"
-python -c "
-import pandas as pd
-import os
+echo "COMPREHENSIVE OUTPUT SUMMARY:"
+echo "============================"
 
-blast_file = '../03_blast_search/output/all_blast_hits_complete.csv'
-if os.path.exists(blast_file):
-    df = pd.read_csv(blast_file)
-    promoter_hits = df[df['element_name'] == 'promoter']
-    if not promoter_hits.empty:
-        best_hits = promoter_hits.loc[promoter_hits.groupby('genome_id')['pident'].idxmax()]
-        print(f'Promoters analyzed: {len(best_hits)} genomes')
-        print(f'Average promoter identity: {best_hits[\"pident\"].mean():.2f}%')
-        print(f'Promoter identity range: {best_hits[\"pident\"].min():.1f}% - {best_hits[\"pident\"].max():.1f}%')
-    else:
-        print('No promoter data found')
-else:
-    print('BLAST results not found')
-"
+# Strategy A outputs
+if [ -d "output/diversity_analysis_strategy_a" ]; then
+    strategy_a_plots=$(ls output/diversity_analysis_strategy_a/*.png 2>/dev/null | wc -l)
+    strategy_a_data=$(ls output/diversity_analysis_strategy_a/*.csv 2>/dev/null | wc -l)
+    echo "📊 Strategy A (Prokka-based): $strategy_a_plots plots, $strategy_a_data data files"
+fi
+
+# Strategy D outputs
+if [ -d "output/diversity_analysis_strategy_d" ]; then
+    strategy_d_plots=$(ls output/diversity_analysis_strategy_d/*.png 2>/dev/null | wc -l)
+    strategy_d_data=$(ls output/diversity_analysis_strategy_d/*.csv 2>/dev/null | wc -l)
+    echo "📊 Strategy D (Assembly-based): $strategy_d_plots plots, $strategy_d_data data files"
+fi
+
+# Core gene outputs
+if [ -d "output/core_gene_analysis" ]; then
+    core_plots=$(ls output/core_gene_analysis/*.png 2>/dev/null | wc -l)
+    core_data=$(ls output/core_gene_analysis/*.csv 2>/dev/null | wc -l)
+    echo "📊 Core genes baseline: $core_plots plots, $core_data data files"
+fi
+
+# Comparative outputs
+if [ -d "output/comparative_analysis" ]; then
+    comp_plots=$(ls output/comparative_analysis/*.png 2>/dev/null | wc -l)
+    comp_data=$(ls output/comparative_analysis/*.csv 2>/dev/null | wc -l)
+    echo "📊 Comparative analysis: $comp_plots plots, $comp_data data files"
+fi
+
+echo ""
+echo "KEY OUTPUT DIRECTORIES:"
+echo "======================"
+echo "  📁 output/diversity_analysis_strategy_a/  (Prokka-based operon analysis)"
+echo "  📁 output/diversity_analysis_strategy_d/  (Assembly-based operon analysis)"
+echo "  📁 output/core_gene_analysis/             (Core genes baseline)"
+echo "  📁 output/comparative_analysis/           (Strategy comparison)"
+echo "  📁 output/promoter_msa/                   (Promoter sequences)"
 
 echo ""
 echo "=========================================="
@@ -231,9 +272,22 @@ echo "COMPLETE DIVERSITY ANALYSIS FINISHED"
 echo "=========================================="
 echo "Completed at $(date)"
 echo ""
-echo "All results saved to: output/diversity_analysis/"
+echo "NEXT STEPS FOR ANALYSIS:"
+echo "======================="
+echo "  1. Compare Strategy A vs D results for operon genes"
+echo "  2. Compare operon conservation vs core gene baseline"
+echo "  3. Examine promoter conservation patterns"
+echo "  4. Proceed to dN/dS analysis using selected strategy"
 echo ""
-echo "Next steps:"
-echo "  1. View plots: output/diversity_analysis/*.png"
-echo "  2. Check results: output/diversity_analysis/*.csv"
-echo "  3. Read summary: output/diversity_analysis/diversity_summary.txt"
+echo "KEY RESULT FILES:"
+echo "================"
+echo "  📊 output/diversity_analysis_strategy_a/diversity_results.csv"
+echo "  📊 output/diversity_analysis_strategy_d/diversity_results.csv"
+echo "  📊 output/core_gene_analysis/core_gene_diversity_results.csv"
+echo "  📊 output/comparative_analysis/strategy_comparison.csv"
+echo ""
+echo "VISUALIZATION FILES:"
+echo "==================="
+echo "  🎯 output/*/conservation_profiles.png"
+echo "  🎯 output/comparative_analysis/diversity_comparison.png"
+echo "  🎯 output/promoter_msa/promoter_conservation.png"

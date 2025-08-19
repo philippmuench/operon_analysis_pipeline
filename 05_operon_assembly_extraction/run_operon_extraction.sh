@@ -15,6 +15,7 @@
 # Parse command line arguments
 START_STEP=1
 HELP=false
+STRATEGIES="ABCD"
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -23,6 +24,7 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --start-step STEP    Start pipeline from specific step (1-6, default: 1)"
+    echo "  --strategies LIST    For step 6 only: run selected strategies (combine letters A-D; default: ABCD)"
     echo "  --help               Show this help message"
     echo ""
     echo "Available steps:"
@@ -32,17 +34,23 @@ usage() {
     echo "  4. Create conservation plots (genes and enhanced promoter plots)"
     echo "  5. BLAST-based diversity analysis (supplementary) and summary"
     echo "  6. Multi-strategy comparison (4 strategies using existing BLAST results)"
+    echo "  7. Enhanced conservation plots (Shannon entropy + sequence logos)"
     echo ""
     echo "Examples:"
     echo "  $0                      # Run complete pipeline (all 6 steps)"
     echo "  $0 --start-step 3       # Start from promoter extraction and MSA"
     echo "  $0 --start-step 6       # Run only multi-strategy comparison"
+    echo "  $0 --start-step 7       # Create enhanced conservation plots only"
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --start-step)
             START_STEP="$2"
+            shift 2
+            ;;
+        --strategies)
+            STRATEGIES="$2"
             shift 2
             ;;
         --help)
@@ -63,8 +71,8 @@ if [ "$HELP" = true ]; then
 fi
 
 # Validate start step
-if ! [[ "$START_STEP" =~ ^[1-6]$ ]]; then
-    echo "❌ Error: Invalid start step '$START_STEP'. Must be 1-6."
+if ! [[ "$START_STEP" =~ ^[1-7]$ ]]; then
+    echo "❌ Error: Invalid start step '$START_STEP'. Must be 1-7."
     usage
     exit 1
 fi
@@ -90,7 +98,7 @@ echo "Using MAFFT_TMPDIR=$MAFFT_TMPDIR (TMPDIR=$TMPDIR)"
 echo ""
 echo "Setting up output directories..."
 echo "================================"
-mkdir -p output/{sequences,msa,noncoding_sequences,plots}
+mkdir -p output/{sequences,msa,noncoding_sequences}
 mkdir -p output/msa/{dna_alignments,protein_alignments,noncoding_alignments}
 echo "✅ Output directories created"
 
@@ -250,33 +258,12 @@ fi
 
 ########## Step 4 ##########
 if [ $START_STEP -le 4 ]; then
-    # Step 4a: Gene conservation plots
     echo ""
-    echo "Step 4a: Creating conservation plots for all operon genes..."
-    echo "========================================================"
-    python create_gene_conservation_plots.py \
-        --msa-dir output/msa/dna_alignments \
-        --output-dir output/plots/gene_conservation \
-        --title-suffix "aa_vs_nt; source=${GENOME_SOURCE}"
-    echo "Gene conservation plots completed"
-    echo ""
-
-    # Step 4b: Enhanced promoter plots
-    echo ""
-    echo "Step 4: Creating enhanced promoter conservation plots..."
-    echo "======================================================"
-    python create_promoter_plot_with_pribnow.py \
-        --blast-based \
-        --output-dir output/plots \
-        --title-suffix "source=${PROMOTER_SOURCE}"
-
-    if [ $? -eq 0 ]; then
-        echo "✅ Enhanced promoter plots created"
-        PLOT_RESULTS=1
-    else
-        echo "⚠️  Warning: Enhanced promoter plots failed"
-        PLOT_RESULTS=0
-    fi
+    echo "Step 4: Skipping redundant plot creation..."
+    echo "=========================================="
+    echo "ℹ️  Conservation plots are created as part of Step 6 multi-strategy analysis"
+    echo "   Strategy-specific plots will be available in output/mappings/*/plots/"
+    echo "✅ Step 4 completed (plots handled by Step 6)"
 else
     echo "⏭️  Skipping Step 4: Conservation plots"
 fi
@@ -315,98 +302,114 @@ if [ $START_STEP -le 6 ]; then
     THREADS=${SLURM_CPUS_PER_TASK:-8}
     
     # Strategy A: tblastn (aa→nt) using Prokka genomes (same as steps 1-2, but organized differently)
-    echo "=== Strategy A: tblastn (aa→nt) using Prokka genomes ==="
-    python extract_operon_sequences.py \
-        --prokka_dir ../01_prokka_annotation/output/prokka_results \
-        --blast_dir ../03_blast_search/output/blast_results \
-        --output_dir output/mappings/aa_nt_mapping/prokka/sequences \
-        --min_identity 90 --min_coverage 80 --source prokka
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Strategy A: Sequence extraction completed"
-        python create_msa.py \
-            --coding-sequences output/mappings/aa_nt_mapping/prokka/sequences \
-            --output-dir output/mappings/aa_nt_mapping/prokka/msa \
-            --threads "$THREADS"
+    if [[ "$STRATEGIES" == *A* ]]; then
+        echo "=== Strategy A: tblastn (aa→nt) using Prokka genomes ==="
+        python extract_operon_sequences.py \
+            --prokka_dir ../01_prokka_annotation/output/prokka_results \
+            --blast_dir ../03_blast_search/output/blast_results \
+            --output_dir output/mappings/aa_nt_mapping/prokka/sequences \
+            --min_identity 90 --min_coverage 80 --source prokka
         
         if [ $? -eq 0 ]; then
-            echo "✅ Strategy A: MSA creation completed"
-            python create_gene_conservation_plots.py \
-                --msa-dir output/mappings/aa_nt_mapping/prokka/msa/dna_alignments \
-                --output-dir output/mappings/aa_nt_mapping/prokka/plots \
-                --title-suffix "aa_vs_nt; source=prokka"
-            echo "✅ Strategy A: Conservation plots completed"
+            echo "✅ Strategy A: Sequence extraction completed"
+            python create_msa.py \
+                --coding-sequences output/mappings/aa_nt_mapping/prokka/sequences \
+                --output-dir output/mappings/aa_nt_mapping/prokka/msa \
+                --threads "$THREADS"
+            
+            if [ $? -eq 0 ]; then
+                echo "✅ Strategy A: MSA creation completed"
+                python create_gene_conservation_plots.py \
+                    --msa-dir output/mappings/aa_nt_mapping/prokka/msa/dna_alignments \
+                    --output-dir output/mappings/aa_nt_mapping/prokka/plots \
+                    --title-suffix "aa_vs_nt; source=prokka"
+                echo "✅ Strategy A: Conservation plots completed"
+            fi
         fi
+    else
+        echo "⏭️  Skipping Strategy A (not selected)"
     fi
     
     # Strategy B: blastn (nt→nt) Prokka genomes using existing nt blast results
     echo ""
-    echo "=== Strategy B: blastn (nt→nt) using Prokka genomes ==="
-    python extract_operon_sequences.py \
-        --prokka_dir ../01_prokka_annotation/output/prokka_results \
-        --blast_dir ../03_blast_search/output/blast_results_nt \
-        --output_dir output/mappings/nt_nt_mapping/prokka_genome/sequences \
-        --min_identity 90 --min_coverage 80 --source prokka
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Strategy B: Sequence extraction completed"
-        python create_msa.py \
-            --coding-sequences output/mappings/nt_nt_mapping/prokka_genome/sequences \
-            --output-dir output/mappings/nt_nt_mapping/prokka_genome/msa \
-            --threads "$THREADS"
+    if [[ "$STRATEGIES" == *B* ]]; then
+        echo "=== Strategy B: blastn (nt→nt) using Prokka genomes ==="
+        python extract_operon_sequences.py \
+            --prokka_dir ../01_prokka_annotation/output/prokka_results \
+            --blast_dir ../03_blast_search/output/blast_results_nt \
+            --output_dir output/mappings/nt_nt_mapping/prokka_genome/sequences \
+            --min_identity 90 --min_coverage 80 --source prokka
         
         if [ $? -eq 0 ]; then
-            echo "✅ Strategy B: MSA creation completed"
-            python create_gene_conservation_plots.py \
-                --msa-dir output/mappings/nt_nt_mapping/prokka_genome/msa/dna_alignments \
-                --output-dir output/mappings/nt_nt_mapping/prokka_genome/plots \
-                --title-suffix "nt_vs_nt; source=prokka_genome"
-            echo "✅ Strategy B: Conservation plots completed"
+            echo "✅ Strategy B: Sequence extraction completed"
+            python create_msa.py \
+                --coding-sequences output/mappings/nt_nt_mapping/prokka_genome/sequences \
+                --output-dir output/mappings/nt_nt_mapping/prokka_genome/msa \
+                --threads "$THREADS"
+            
+            if [ $? -eq 0 ]; then
+                echo "✅ Strategy B: MSA creation completed"
+                python create_gene_conservation_plots.py \
+                    --msa-dir output/mappings/nt_nt_mapping/prokka_genome/msa/dna_alignments \
+                    --output-dir output/mappings/nt_nt_mapping/prokka_genome/plots \
+                    --title-suffix "nt_vs_nt; source=prokka_genome"
+                echo "✅ Strategy B: Conservation plots completed"
+            fi
         fi
+    else
+        echo "⏭️  Skipping Strategy B (not selected)"
     fi
     
     # Strategy C: blastn Prokka variants using existing prokka_variants blast results
     echo ""
-    echo "=== Strategy C: blastn Prokka variants (qseq extraction) ==="
-    python create_msa_variants_from_blast.py \
-        --blast-dir ../03_blast_search/output/blast_results_prokka_variants \
-        --output-dir output/mappings/nt_nt_mapping/prokka_variants \
-        --threads "$THREADS"
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Strategy C: Variant MSA creation completed"
-        python create_gene_conservation_plots.py \
-            --msa-dir output/mappings/nt_nt_mapping/prokka_variants/msa_variants \
-            --output-dir output/mappings/nt_nt_mapping/prokka_variants/plots \
-            --title-suffix "nt_vs_nt; source=prokka_variants"
-        echo "✅ Strategy C: Conservation plots completed"
+    if [[ "$STRATEGIES" == *C* ]]; then
+        echo "=== Strategy C: blastn Prokka variants (qseq extraction) ==="
+        python create_msa_variants_from_blast.py \
+            --blast-dir ../03_blast_search/output/blast_results_prokka_variants \
+            --output-dir output/mappings/nt_nt_mapping/prokka_variants \
+            --threads "$THREADS"
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Strategy C: Variant MSA creation completed"
+            python create_gene_conservation_plots.py \
+                --msa-dir output/mappings/nt_nt_mapping/prokka_variants/msa_variants \
+                --output-dir output/mappings/nt_nt_mapping/prokka_variants/plots \
+                --title-suffix "nt_vs_nt; source=prokka_variants"
+            echo "✅ Strategy C: Conservation plots completed"
+        fi
+    else
+        echo "⏭️  Skipping Strategy C (not selected)"
     fi
     
     # Strategy D: tblastn (aa→nt) with direct assemblies extraction
     echo ""
-    echo "=== Strategy D: tblastn (aa→nt) using raw assemblies ==="
-    python extract_operon_sequences.py \
-        --prokka_dir ../01_prokka_annotation/output/prokka_results \
-        --blast_dir ../03_blast_search/output/blast_results \
-        --output_dir output/mappings/aa_nt_mapping/assemblies/sequences \
-        --min_identity 90 --min_coverage 80 --source assemblies \
-        --assemblies_dir ../Efs_assemblies
-    
-    if [ $? -eq 0 ]; then
-        echo "✅ Strategy D: Sequence extraction completed"
-        python create_msa.py \
-            --coding-sequences output/mappings/aa_nt_mapping/assemblies/sequences \
-            --output-dir output/mappings/aa_nt_mapping/assemblies/msa \
-            --threads "$THREADS"
+    if [[ "$STRATEGIES" == *D* ]]; then
+        echo "=== Strategy D: tblastn (aa→nt) using raw assemblies ==="
+        python extract_operon_sequences.py \
+            --prokka_dir ../01_prokka_annotation/output/prokka_results \
+            --blast_dir ../03_blast_search/output/blast_results \
+            --output_dir output/mappings/aa_nt_mapping/assemblies/sequences \
+            --min_identity 90 --min_coverage 80 --source assemblies \
+            --assemblies_dir ../../Efs_assemblies
         
         if [ $? -eq 0 ]; then
-            echo "✅ Strategy D: MSA creation completed"
-            python create_gene_conservation_plots.py \
-                --msa-dir output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments \
-                --output-dir output/mappings/aa_nt_mapping/assemblies/plots \
-                --title-suffix "aa_vs_nt; source=assemblies"
-            echo "✅ Strategy D: Conservation plots completed"
+            echo "✅ Strategy D: Sequence extraction completed"
+            python create_msa.py \
+                --coding-sequences output/mappings/aa_nt_mapping/assemblies/sequences \
+                --output-dir output/mappings/aa_nt_mapping/assemblies/msa \
+                --threads "$THREADS"
+            
+            if [ $? -eq 0 ]; then
+                echo "✅ Strategy D: MSA creation completed"
+                python create_gene_conservation_plots.py \
+                    --msa-dir output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments \
+                    --output-dir output/mappings/aa_nt_mapping/assemblies/plots \
+                    --title-suffix "aa_vs_nt; source=assemblies"
+                echo "✅ Strategy D: Conservation plots completed"
+            fi
         fi
+    else
+        echo "⏭️  Skipping Strategy D (not selected)"
     fi
     
     echo ""
@@ -428,6 +431,56 @@ else
     echo "⏭️  Skipping Step 6: Multi-strategy comparison"
 fi
 
+########## Step 7 ##########
+if [ $START_STEP -le 7 ]; then
+    echo ""
+    echo "Step 7: Creating enhanced conservation plots (Shannon entropy + sequence logos)..."
+    echo "=============================================================================="
+    echo "🔍 Generating improved conservation visualizations for all strategies"
+    echo ""
+    
+    # Enhanced plots for Strategy A (Prokka)
+    if [ -d "output/mappings/aa_nt_mapping/prokka/msa/dna_alignments" ]; then
+        echo "Creating enhanced plots for Strategy A (Prokka)..."
+        python create_enhanced_conservation_plots.py \
+            --msa-dir output/mappings/aa_nt_mapping/prokka/msa/dna_alignments \
+            --output-dir output/mappings/aa_nt_mapping/prokka/enhanced_plots \
+            --title-suffix "Strategy A: aa→nt, Prokka"
+        echo "✅ Strategy A enhanced plots completed"
+    fi
+    
+    # Enhanced plots for Strategy D (Assemblies)
+    if [ -d "output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments" ]; then
+        echo ""
+        echo "Creating enhanced plots for Strategy D (Assemblies)..."
+        python create_enhanced_conservation_plots.py \
+            --msa-dir output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments \
+            --output-dir output/mappings/aa_nt_mapping/assemblies/enhanced_plots \
+            --title-suffix "Strategy D: aa→nt, Assemblies"
+        echo "✅ Strategy D enhanced plots completed"
+    fi
+    
+    # Enhanced plots for Strategy B (nt→nt Prokka)
+    if [ -d "output/mappings/nt_nt_mapping/prokka_genome/msa/dna_alignments" ]; then
+        echo ""
+        echo "Creating enhanced plots for Strategy B (nt→nt Prokka)..."
+        python create_enhanced_conservation_plots.py \
+            --msa-dir output/mappings/nt_nt_mapping/prokka_genome/msa/dna_alignments \
+            --output-dir output/mappings/nt_nt_mapping/prokka_genome/enhanced_plots \
+            --title-suffix "Strategy B: nt→nt, Prokka"
+        echo "✅ Strategy B enhanced plots completed"
+    fi
+    
+    echo ""
+    echo "📊 Enhanced conservation plots completed!"
+    echo "   Shannon entropy-based conservation scores show biological relevance"
+    echo "   Sequence logos visualize nucleotide frequency patterns"
+    echo "   Plots available in: output/mappings/*/enhanced_plots/"
+    
+else
+    echo "⏭️  Skipping Step 7: Enhanced conservation plots"
+fi
+
 # Generate summary
 echo ""
 echo "=================================================="
@@ -441,7 +494,7 @@ TOTAL_GENE_FASTA=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
 TOTAL_DNA_MSA=$(find output/msa/dna_alignments -name "*_aligned.fasta" 2>/dev/null | wc -l)
 TOTAL_PROTEIN_MSA=$(find output/msa/protein_alignments -name "*_aligned.fasta" 2>/dev/null | wc -l)
 TOTAL_NONCODING_MSA=$(find output/msa/noncoding_alignments -name "*_aligned.fasta" 2>/dev/null | wc -l)
-TOTAL_PLOTS=$(find output/plots -name "*.png" 2>/dev/null | wc -l)
+TOTAL_PLOTS=$(find output/mappings -name "*.png" 2>/dev/null | wc -l)
 TOTAL_BLAST_RESULTS=$(find output -name "*results.csv" 2>/dev/null | wc -l)
 # Promoter sequences count (number of sequences in promoter.fasta if present)
 if [ -f "output/noncoding_sequences/promoter.fasta" ]; then
@@ -463,7 +516,7 @@ echo "   - output/sequences/                          (extracted gene sequences)
 echo "   - output/msa/dna_alignments/                 (DNA MSAs)"
 echo "   - output/msa/protein_alignments/             (protein MSAs)"
 echo "   - output/msa/noncoding_alignments/           (promoter MSAs)"
-echo "   - output/plots/                              (conservation plots)"
+echo "   - output/mappings/*/plots/                   (strategy-specific conservation plots)"
 echo "   - output/diversity_analysis/                 (BLAST analysis results)"
 echo "   - output/mappings/aa_nt_mapping/             (multi-strategy: aa→nt)"
 echo "   - output/mappings/nt_nt_mapping/             (multi-strategy: nt→nt)"
@@ -501,7 +554,7 @@ output/
 │   ├── dna_alignments/         # DNA MSAs
 │   ├── protein_alignments/     # Protein MSAs
 │   └── noncoding_alignments/   # Promoter MSAs
-├── plots/                      # Conservation plots
+├── mappings/                   # Strategy-specific results with plots
 ├── diversity_analysis/         # BLAST-based analysis results
 └── extraction_pipeline_summary.txt
 
@@ -526,7 +579,7 @@ if [ $TOTAL_GENE_FASTA -gt 0 ]; then
     echo "🎯 Key outputs for next steps:"
     echo "   - MSAs: output/msa/"
     echo "   - Sequences: output/sequences/"
-    echo "   - Promoter plots: output/plots/"
+    echo "   - Strategy plots: output/mappings/*/plots/"
     exit 0
 else
     echo ""
