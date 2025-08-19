@@ -31,3 +31,17 @@ Across all search strategies, we generated 473,867 BLAST hits, of which 55,826 (
 For each genome and query gene combination, we retained only the highest-scoring hit based on bitscore to avoid redundancy. Both DNA strands were searched automatically by BLAST, with reverse complement matches identified by coordinate order (sstart > send). This comprehensive search strategy ensured robust detection of operon components across diverse bacterial lineages while capturing the sequence variation necessary for downstream phylogenetic and conservation analyses.
 
 Multiple sequence alignments were generated using MAFFT version 7.490 with automatic algorithm selection, and temporary files were directed to high-performance local storage (/vol/tmp) to optimize computational efficiency during large-scale alignment operations.
+
+## Core Gene Analysis
+
+To establish a baseline for evaluating operon gene conservation, we performed comprehensive core gene analysis across all annotated *E. faecalis* genomes. Core genes were defined as those present in ≥95% of genomes, representing the conserved genetic backbone of the species that could serve as a reference for comparison with the more variable operon genes.
+
+Core gene identification was performed by parsing all Prokka-generated GFF annotation files to extract gene names and calculate prevalence statistics across the 8,587 genome dataset. This analysis identified 5,540 unique genes across all genomes, with 1,251 genes meeting the ≥95% prevalence threshold for core gene designation. Notably, no genes were present in 100% of genomes, reflecting the inherent genomic diversity within *E. faecalis*, while 1,071 genes achieved ≥99% prevalence, representing the most highly conserved genetic elements.
+
+For each core gene, nucleotide sequences were extracted from Prokka annotations across all genomes where the gene was present, yielding an average of 7,693 sequences per gene (range dependent on gene prevalence). The extracted sequences averaged 987 bp in length (range 171-2,340 bp), reflecting the diversity of core gene functions from small regulatory genes to large metabolic enzymes.
+
+Multiple sequence alignments were generated for all 1,280 core genes using MAFFT with automatic algorithm selection and parallel processing for computational efficiency. The resulting alignments averaged 1,095 positions in length and contained an average of 7,709 sequences per alignment, providing robust datasets for conservation analysis.
+
+Conservation analysis was performed using Shannon entropy-based scoring, where conservation scores range from 0 (highly variable) to 1 (perfectly conserved). The core genes exhibited high overall conservation with a mean score of 0.931, confirming their fundamental importance to *E. faecalis* biology. Conservation analysis revealed that 935 genes (73.0%) were highly conserved (score ≥0.9), 273 genes (21.3%) were moderately conserved (0.7-0.9), and only 72 genes (5.6%) showed lower conservation scores. Mean pairwise sequence identity across core genes was 0.924, with an average gap percentage of 8.2% in alignments.
+
+This comprehensive core gene analysis established the baseline conservation patterns for essential *E. faecalis* genes, against which the conservation of the fructoselysine/glucoselysine operon genes could be compared to assess their relative evolutionary constraint and functional importance within the species.
