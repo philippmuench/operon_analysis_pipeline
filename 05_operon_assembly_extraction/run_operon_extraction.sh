@@ -111,22 +111,45 @@ if [ $START_STEP -le 1 ]; then
     GENOME_SOURCE=${GENOME_SOURCE:-prokka}
     ASSEMBLIES_DIR=${ASSEMBLIES_DIR:-../Efs_assemblies}
 
-    if has_strategy current; then
-        python extract_operon_sequences.py \
-            --prokka_dir ../01_prokka_annotation/output/prokka_results \
-            --blast_dir ../03_blast_search/output/blast_results \
-            --output_dir output/sequences \
-            --min_identity 90 \
-            --min_coverage 80 \
-            --source "$GENOME_SOURCE" \
-            --assemblies_dir "$ASSEMBLIES_DIR"
+    echo "🔍 Starting sequence extraction with parameters:"
+    echo "   - BLAST results dir: ../03_blast_search/output/blast_results"
+    echo "   - Prokka dir: ../01_prokka_annotation/output/prokka_results"
+    echo "   - Output dir: output/sequences"
+    echo "   - Min identity: 90%"
+    echo "   - Min coverage: 80%"
+    echo "   - Source: $GENOME_SOURCE"
+    echo ""
 
-        if [ $? -ne 0 ]; then
-            echo "❌ Error: Real sequence extraction failed (current)"
-            exit 1
+    python extract_operon_sequences.py \
+        --prokka_dir ../01_prokka_annotation/output/prokka_results \
+        --blast_dir ../03_blast_search/output/blast_results \
+        --output_dir output/sequences \
+        --min_identity 90 \
+        --min_coverage 80 \
+        --source "$GENOME_SOURCE" \
+        --assemblies_dir "$ASSEMBLIES_DIR"
+
+    EXTRACTION_EXIT_CODE=$?
+    GENE_FASTA_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
+    
+    echo ""
+    echo "📊 Step 1 Results:"
+    if [ $EXTRACTION_EXIT_CODE -eq 0 ]; then
+        echo "✅ Sequence extraction completed successfully"
+        echo "   - Gene FASTA files created: $GENE_FASTA_COUNT"
+        if [ $GENE_FASTA_COUNT -gt 0 ]; then
+            echo "   - Example files:"
+            find output/sequences -name "*.fasta" | head -3 | while read file; do
+                seq_count=$(grep -c ">" "$file" 2>/dev/null || echo "0")
+                echo "     * $(basename "$file"): $seq_count sequences"
+            done
+        else
+            echo "⚠️  Warning: No sequence files were created - check BLAST results and thresholds"
         fi
-        GENE_FASTA_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
-        echo "✅ Real sequence extraction (current) completed ($GENE_FASTA_COUNT gene files)"
+    else
+        echo "❌ Sequence extraction failed (exit code: $EXTRACTION_EXIT_CODE)"
+        echo "   Check the error messages above for details"
+        exit 1
     fi
 else
     echo "⏭️  Skipping Step 1: Gene sequence extraction"
@@ -137,17 +160,53 @@ if [ $START_STEP -le 2 ]; then
     echo ""
     echo "Step 2: Creating Multiple Sequence Alignments..."
     echo "================================================"
-    if has_strategy current; then
-        python create_msa.py \
-            --coding-sequences output/sequences \
-            --output-dir output/msa \
-            --threads ${SLURM_CPUS_PER_TASK:-8}
-        if [ $? -eq 0 ]; then
-            DNA_MSA_COUNT=$(find output/msa/dna_alignments -name "*.fasta" 2>/dev/null | wc -l)
-            echo "✅ MSA (current) completed ($DNA_MSA_COUNT DNA alignments)"
+    
+    # Check if we have sequences from step 1
+    SEQUENCE_COUNT=$(find output/sequences -name "*.fasta" 2>/dev/null | wc -l)
+    if [ $SEQUENCE_COUNT -eq 0 ]; then
+        echo "⚠️  Warning: No sequence files found in output/sequences/"
+        echo "   Step 1 may have failed or been skipped"
+        echo "   Proceeding anyway in case sequences exist elsewhere..."
+    else
+        echo "🔍 Found $SEQUENCE_COUNT sequence files for alignment"
+    fi
+    
+    echo "🔧 Starting MSA creation with parameters:"
+    echo "   - Input sequences: output/sequences"
+    echo "   - Output directory: output/msa"
+    echo "   - Threads: ${SLURM_CPUS_PER_TASK:-8}"
+    echo "   - MAFFT_TMPDIR: $MAFFT_TMPDIR"
+    echo ""
+
+    python create_msa.py \
+        --coding-sequences output/sequences \
+        --output-dir output/msa \
+        --threads ${SLURM_CPUS_PER_TASK:-8}
+    
+    MSA_EXIT_CODE=$?
+    DNA_MSA_COUNT=$(find output/msa/dna_alignments -name "*.fasta" 2>/dev/null | wc -l)
+    PROTEIN_MSA_COUNT=$(find output/msa/protein_alignments -name "*.fasta" 2>/dev/null | wc -l)
+    
+    echo ""
+    echo "📊 Step 2 Results:"
+    if [ $MSA_EXIT_CODE -eq 0 ]; then
+        echo "✅ MSA creation completed successfully"
+        echo "   - DNA alignments created: $DNA_MSA_COUNT"
+        echo "   - Protein alignments created: $PROTEIN_MSA_COUNT"
+        if [ $DNA_MSA_COUNT -gt 0 ]; then
+            echo "   - Example DNA alignments:"
+            find output/msa/dna_alignments -name "*.fasta" | head -3 | while read file; do
+                seq_count=$(grep -c ">" "$file" 2>/dev/null || echo "0")
+                seq_length=$(head -2 "$file" | tail -1 | wc -c 2>/dev/null || echo "0")
+                echo "     * $(basename "$file"): $seq_count sequences, ~$seq_length bp"
+            done
         else
-            echo "⚠️  Warning: MSA (current) failed"
+            echo "⚠️  Warning: No DNA alignments were created"
         fi
+    else
+        echo "⚠️  MSA creation failed (exit code: $MSA_EXIT_CODE)"
+        echo "   Check MAFFT installation and temporary directory permissions"
+        echo "   Continuing with pipeline..."
     fi
 else
     echo "⏭️  Skipping Step 2: MSA creation for genes"
