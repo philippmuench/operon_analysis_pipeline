@@ -4,10 +4,6 @@
 
 Prior to homology searches, all bacterial genome assemblies were annotated using Prokka version 1.14.6 to ensure consistent gene prediction and annotation across the dataset. We processed 8,587 *Enterococcus faecalis* genome assemblies obtained from public databases, with each genome annotated using species-specific parameters (--kingdom Bacteria --genus Enterococcus --species faecalis).
 
-Prokka annotation was performed using a high-throughput SLURM array job architecture, processing genomes in batches of 100 with up to 20 parallel batches to optimize computational efficiency. Each annotation job was allocated 4 CPU cores and 8 GB memory with a 24-hour time limit. The annotation pipeline generated eight output files per genome: gene feature format files (.gff), protein sequences (.faa), nucleotide gene sequences (.ffn), genomic nucleotide sequences (.fna), GenBank format (.gbk), feature tables (.tsv), statistics summaries (.txt), and processing logs (.log).
-
-Quality control was implemented through comprehensive validation scripts that verified the presence and integrity of all expected output files. Successfully annotated genomes averaged 2,824 predicted genes per genome, yielding a total of approximately 24.3 million gene predictions across the complete dataset. This standardized annotation provided the foundation for subsequent homology searches by ensuring consistent gene boundaries and feature identification across all analyzed genomes.
-
 ## BLAST-based Homology Search
 
 We employed a multi-strategy BLAST search approach to comprehensively identify operon homologs across bacterial genomes. Reference sequences for the seven-gene operon (frpC, glpC, ptsD, ptsC, ptsB, ptsA, fruR) were extracted from the *Enterococcus faecalis* V583 genome and used as queries in four complementary search strategies.
