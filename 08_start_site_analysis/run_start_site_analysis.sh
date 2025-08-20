@@ -47,4 +47,25 @@ python analyze_start_sites.py \
 
 echo "Done. Output in $OUT_DIR"
 
+# Generate manuscript statistics if analysis was successful
+if [ -f "$OUT_DIR/start_site_summary.tsv" ]; then
+    echo ""
+    echo "=========================================="
+    echo "Generating manuscript statistics..."
+    echo "=========================================="
+    
+    python manuscript_numbers.py --output "$OUT_DIR/manuscript_stats.txt"
+    
+    # Display the statistics
+    if [ -f "$OUT_DIR/manuscript_stats.txt" ]; then
+        echo ""
+        echo "Manuscript Statistics Generated:"
+        echo "----------------------------------------"
+        cat "$OUT_DIR/manuscript_stats.txt"
+        echo "----------------------------------------"
+    fi
+else
+    echo "WARNING: Analysis results not found, skipping manuscript statistics"
+fi
+
 

@@ -1,44 +1,65 @@
-### Start-site analysis for operon genes
+# Step 8: Start Site Analysis
 
-This module investigates start-codon choice discrepancies between reference operon genes (`02_reference_operon_extraction/output/operon_genes_nt.fasta`) and Prokka/Prodigal calls across assemblies. It scans each called CDS for upstream, in-frame alternative start codons (ATG/GTG/TTG), checks for Shine–Dalgarno-like RBS motifs at appropriate spacings, and summarizes why a shorter downstream start may have been chosen.
+Analyzes translation initiation sites and ribosome binding sites for operon genes.
 
-#### Inputs
-- `--prokka_dir` directory with per-genome Prokka outputs (each subdir contains `.gff` and `.fna`).
-- `--gene_reference_fasta` multi-FASTA of operon reference genes (default points to `02_reference_operon_extraction/output/operon_genes_nt.fasta`). Used to determine the set of gene names to analyze.
-- Optional: `--genome_list` file with one genome id per line to limit the analysis.
+## Overview
 
-#### Outputs (in `08_start_site_analysis/output` by default)
-- `start_site_summary.tsv`: One row per genome × gene with fields including:
-  - genome_id, gene, contig, strand, start, end
-  - start_codon (from sequence), `start_type`/`partial`/`rbs_motif`/`rbs_spacer` (from GFF when present)
-  - upstream_candidate_found, upstream_codon, upstream_offset_nt
-  - upstream_has_rbs, upstream_rbs_seq, upstream_rbs_spacer_nt, upstream_rbs_mismatches
-  - classification (e.g., Alt_upstream_with_RBS, Upstream_no_RBS, No_upstream, Partial_gene, Same_start)
-- `contexts/` (optional): per-case sequence context snippets around the chosen and alternative starts.
-- `report.html` (optional): compact HTML with highlighted starts/RBS for a sample of interesting cases.
+This step examines:
+- Start codon usage (ATG, GTG, TTG)
+- Alternative upstream start sites
+- Ribosome binding sites (Shine-Dalgarno sequences)
+- Discrepancies between predicted and potential start sites
 
-#### Heuristics
-- Scan up to `--max_upstream` nt upstream (default 120 nt) in the gene’s frame for ATG/GTG/TTG that extend the ORF without encountering an in-frame stop (TAA/TAG/TGA).
-- RBS-like motifs checked within `--rbs_min_spacer`..`--rbs_max_spacer` (default 4..13 nt) upstream of each candidate start. Motifs tested: `AGGAGG`, `GGAGG`, `AGGA`, `GGAG`, `GAGG`. Up to 1 mismatch is allowed.
+## Unique Analysis
 
-#### Usage
+This step provides analysis NOT covered in other steps:
+- **Translation initiation**: Start codon preferences
+- **RBS detection**: Shine-Dalgarno motif identification
+- **Gene boundary validation**: Alternative start site detection
+- **Regulatory signals**: RBS spacer distance analysis
+
+## Input Data
+
+Uses Prokka annotations from Step 01:
+- Directory: `../01_prokka_annotation/output/prokka_results/`
+- Reference genes: `../02_reference_operon_extraction/output/operon_genes_nt.fasta`
+
+## Scripts
+
+- `analyze_start_sites.py` - Main analysis of start codons and RBS
+- `manuscript_numbers.py` - Generates statistics for manuscript
+- `run_start_site_analysis.sh` - SLURM submission script (includes all steps)
+- `run_manuscript_stats.sh` - Generate manuscript statistics only
+
+## Usage
+
 ```bash
-cd 08_start_site_analysis
-
-# Run locally on a subset
-python analyze_start_sites.py \
-  --prokka_dir ../prokka_output \
-  --gene_reference_fasta ../02_reference_operon_extraction/output/operon_genes_nt.fasta \
-  --output_dir ./output \
-  --max_workers 8
-
-# Or submit to SLURM for the full dataset
+# Run complete analysis (including manuscript stats)
 sbatch run_start_site_analysis.sh
+
+# Generate manuscript statistics only (if analysis already done)
+sbatch run_manuscript_stats.sh
 ```
 
-#### Notes
-- The script is robust to missing attributes; if `start_type`/`rbs_motif` are absent in GFF, they are inferred from sequence where possible.
-- For minus-strand genes, sequences are analyzed in the coding orientation (reverse-complement and reindexed so position 0 is the called start codon).
-- This module does not change calls; it explains likely reasons why upstream starts were not chosen.
+## Output Files
 
+Located in `output/`:
+- `start_site_summary.tsv` - Detailed results for each gene instance
+- `manuscript_stats.txt` - Key statistics formatted for manuscript
+- `report/report.html` - Visual report with highlighted start sites and RBS
 
+## Key Metrics
+
+- **Start codon distribution**: % using ATG vs GTG vs TTG
+- **Alternative starts**: Genes with potential upstream start sites
+- **RBS presence**: Genes with detected Shine-Dalgarno sequences
+- **RBS spacing**: Distance between RBS and start codon (typically 4-13 nt)
+
+## Classifications
+
+Genes are classified based on their start sites:
+- **Alt_upstream_with_RBS**: Alternative upstream start with RBS present
+- **Upstream_no_RBS**: Upstream start exists but lacks RBS
+- **No_upstream**: No alternative upstream start found
+- **Partial_gene**: Gene appears truncated
+- **Same_start**: Predicted start matches expectation
