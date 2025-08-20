@@ -26,6 +26,25 @@ The fructoselysine/glucoselysine operon contains 7 genes:
 6. PTS system EIIA component
 7. Sigma-54 dependent transcriptional regulator
 
+## Manuscript Statistics
+Generate statistics for the manuscript after extracting reference sequences:
+```bash
+# Generate with SLURM (recommended)
+sbatch run_manuscript_stats.sh
+
+# Or run directly (outputs to console)
+python manuscript_numbers.py
+
+# Save statistics to file
+python manuscript_numbers.py manuscript_stats.txt
+```
+
+The statistics include:
+- Reference genome source information
+- Number and length of extracted protein sequences
+- Number and length of extracted nucleotide sequences
+- Operon gene composition details
+
 ## Notes
 - These exported sequences are used by Step 03 (`../03_blast_search/`) as BLAST queries.
 - If the GenBank content changes, re-run this step before repeating the BLAST searches.

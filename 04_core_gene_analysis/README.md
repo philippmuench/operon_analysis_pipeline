@@ -92,3 +92,24 @@ python plot_core_gene_thresholds.py \
 ```
 
 **Integration**: Automatically run as part of `run_core_analysis.sh` pipeline.
+
+## Manuscript Statistics
+
+Generate statistics for the manuscript after running core gene analysis:
+```bash
+# Generate with SLURM (recommended)
+sbatch run_manuscript_stats.sh
+
+# Or run directly (outputs to console)
+python manuscript_numbers.py
+
+# Save statistics to file
+python manuscript_numbers.py manuscript_stats.txt
+```
+
+The statistics include:
+- Total unique genes identified across genomes
+- Number of core genes (≥95% prevalence)
+- Conservation scores and categories
+- Mean pairwise identity and gap statistics
+- Summary ready for manuscript inclusion

@@ -147,90 +147,141 @@ def count_input_genomes():
         return len(genome_dirs)
     return 0
 
-def generate_manuscript_stats():
-    """Generate all statistics for manuscript."""
+def generate_manuscript_stats(output_file=None):
+    """Generate all statistics for manuscript.
     
-    print("Core Gene Analysis Statistics for Manuscript")
-    print("=" * 60)
+    Args:
+        output_file (str): Optional path to save output to file. If None, prints to console.
+    """
+    
+    # Collect all output lines
+    output_lines = []
+    
+    def add_line(text=""):
+        """Add a line to both console and file output."""
+        print(text)
+        output_lines.append(text)
+    
+    add_line("Core Gene Analysis Statistics for Manuscript")
+    add_line("=" * 60)
     
     # Input genomes
     input_genomes = count_input_genomes()
-    print(f"\n1. Input Data:")
-    print(f"   Genomes analyzed: {input_genomes:,}")
+    add_line(f"\n1. Input Data:")
+    add_line(f"   Genomes analyzed: {input_genomes:,}")
+    add_line(f"   Source: Prokka-annotated E. faecalis genomes")
     
     # Core gene identification
-    print(f"\n2. Core Gene Identification:")
+    add_line(f"\n2. Core Gene Identification:")
     core_stats = analyze_core_gene_identification()
-    print(f"   Total unique genes: {core_stats.get('total_unique_genes', 0):,}")
-    print(f"   Core genes (≥95%): {core_stats.get('core_genes_count', 0):,}")
-    print(f"   Genes in 100% genomes: {core_stats.get('genes_in_all_genomes', 0):,}")
+    add_line(f"   Total unique genes across all genomes: {core_stats.get('total_unique_genes', 0):,}")
+    add_line(f"   Core genes (≥95% prevalence): {core_stats.get('core_genes_count', 0):,}")
+    add_line(f"   Genes in 100% of genomes: {core_stats.get('genes_in_all_genomes', 0):,}")
+    add_line(f"   Rare genes (<10% prevalence): {core_stats.get('rare_genes_10pct', 0):,}")
     
     if 'prevalence_distribution' in core_stats:
-        print(f"   Prevalence distribution:")
-        for threshold, count in core_stats['prevalence_distribution'].items():
-            print(f"     ≥{threshold}: {count:,} genes")
+        add_line(f"\n   Prevalence distribution:")
+        for threshold, count in sorted(core_stats['prevalence_distribution'].items(), reverse=True):
+            add_line(f"     ≥{threshold}: {count:,} genes")
+    
+    if 'mean_prevalence' in core_stats:
+        add_line(f"\n   Mean gene prevalence: {core_stats['mean_prevalence']:.3f}")
     
     # Sequence extraction
-    print(f"\n3. Sequence Extraction:")
+    add_line(f"\n3. Sequence Extraction:")
     seq_stats = analyze_sequence_extraction()
-    print(f"   Genes with sequences extracted: {seq_stats.get('genes_extracted', 0):,}")
+    add_line(f"   Core genes with sequences extracted: {seq_stats.get('genes_extracted', 0):,}")
     if 'avg_sequences_per_gene' in seq_stats:
-        print(f"   Average sequences per gene: {seq_stats['avg_sequences_per_gene']:.0f}")
-        print(f"   Average sequence length: {seq_stats['avg_sequence_length']:.0f} bp")
-        print(f"   Length range: {seq_stats['min_sequence_length']}-{seq_stats['max_sequence_length']} bp")
+        add_line(f"   Average sequences per gene: {seq_stats['avg_sequences_per_gene']:.0f}")
+        add_line(f"   Average sequence length: {seq_stats['avg_sequence_length']:.0f} bp")
+        add_line(f"   Length range: {seq_stats['min_sequence_length']}-{seq_stats['max_sequence_length']} bp")
     
     # MSA creation
-    print(f"\n4. Multiple Sequence Alignments:")
+    add_line(f"\n4. Multiple Sequence Alignments:")
     msa_stats = analyze_msa_creation()
-    print(f"   Alignments created: {msa_stats.get('alignments_created', 0):,}")
+    add_line(f"   Alignments created: {msa_stats.get('alignments_created', 0):,}")
     if 'avg_alignment_length' in msa_stats:
-        print(f"   Average alignment length: {msa_stats['avg_alignment_length']:.0f} positions")
-        print(f"   Average sequences per alignment: {msa_stats['avg_sequences_per_alignment']:.0f}")
+        add_line(f"   Average alignment length: {msa_stats['avg_alignment_length']:.0f} positions")
+        add_line(f"   Average sequences per alignment: {msa_stats['avg_sequences_per_alignment']:.0f}")
+    add_line(f"   Alignment software: MAFFT v7.490")
+    add_line(f"   Algorithm selection: Automatic (--auto)")
     
     # Conservation analysis
-    print(f"\n5. Conservation Analysis:")
+    add_line(f"\n5. Conservation Analysis:")
     cons_stats = analyze_conservation_metrics()
     if 'genes_analyzed' in cons_stats:
-        print(f"   Genes analyzed: {cons_stats['genes_analyzed']:,}")
-        print(f"   Mean conservation score: {cons_stats['mean_conservation_score']:.3f}")
+        add_line(f"   Genes analyzed: {cons_stats['genes_analyzed']:,}")
+        add_line(f"   Mean conservation score: {cons_stats['mean_conservation_score']:.3f}")
+        add_line(f"   Standard deviation: {cons_stats.get('std_conservation_score', 0):.3f}")
+        
         if 'conservation_categories' in cons_stats:
-            print(f"   Conservation categories:")
-            for category, count in cons_stats['conservation_categories'].items():
-                print(f"     {category}: {count:,} genes")
+            add_line(f"\n   Conservation categories:")
+            for category, count in sorted(cons_stats['conservation_categories'].items()):
+                percentage = (count / cons_stats['genes_analyzed'] * 100) if cons_stats['genes_analyzed'] > 0 else 0
+                add_line(f"     {category}: {count:,} genes ({percentage:.1f}%)")
         
         if 'mean_pairwise_identity' in cons_stats:
-            print(f"   Mean pairwise identity: {cons_stats['mean_pairwise_identity']:.3f}")
+            add_line(f"\n   Mean pairwise identity: {cons_stats['mean_pairwise_identity']:.3f}")
         if 'mean_gap_percentage' in cons_stats:
-            print(f"   Mean gap percentage: {cons_stats['mean_gap_percentage']:.1f}%")
+            add_line(f"   Mean gap percentage: {cons_stats['mean_gap_percentage']:.1f}%")
     else:
-        print(f"   Conservation analysis not completed")
+        add_line(f"   Conservation analysis not completed")
+    
+    add_line(f"\n   Conservation scoring method: Shannon entropy")
+    add_line(f"   Score range: 0 (highly variable) to 1 (perfectly conserved)")
     
     # Summary for manuscript
-    print("\n" + "=" * 60)
-    print("MANUSCRIPT NUMBERS SUMMARY:")
-    print("=" * 60)
-    print(f"Input genomes: {input_genomes:,}")
-    print(f"Unique genes identified: {core_stats.get('total_unique_genes', 0):,}")
-    print(f"Core genes (≥95% prevalence): {core_stats.get('core_genes_count', 0):,}")
-    print(f"Genes in 100% of genomes: {core_stats.get('genes_in_all_genomes', 0):,}")
-    print(f"Core gene sequences extracted: {seq_stats.get('genes_extracted', 0):,}")
-    print(f"Multiple sequence alignments: {msa_stats.get('alignments_created', 0):,}")
+    add_line("\n" + "=" * 60)
+    add_line("MANUSCRIPT NUMBERS SUMMARY:")
+    add_line("=" * 60)
+    add_line(f"Input genomes: {input_genomes:,} E. faecalis")
+    add_line(f"Unique genes identified: {core_stats.get('total_unique_genes', 0):,}")
+    add_line(f"Core genes (≥95% prevalence): {core_stats.get('core_genes_count', 0):,}")
+    add_line(f"Genes in 100% of genomes: {core_stats.get('genes_in_all_genomes', 0):,}")
+    
+    if seq_stats.get('genes_extracted', 0) > 0 and 'avg_sequences_per_gene' in seq_stats:
+        total_sequences = int(seq_stats['genes_extracted'] * seq_stats['avg_sequences_per_gene'])
+        add_line(f"Total core gene sequences extracted: ~{total_sequences:,}")
+    
+    add_line(f"Multiple sequence alignments created: {msa_stats.get('alignments_created', 0):,}")
+    
     if 'mean_conservation_score' in cons_stats:
-        print(f"Mean conservation score: {cons_stats['mean_conservation_score']:.3f}")
-    print(f"Analysis threshold: ≥95% prevalence")
-    print(f"Software: MAFFT for alignments, Shannon entropy for conservation")
+        add_line(f"Mean conservation score: {cons_stats['mean_conservation_score']:.3f}")
+    
+    add_line(f"\nMethodology:")
+    add_line(f"  - Core gene threshold: ≥95% prevalence")
+    add_line(f"  - Alignment software: MAFFT v7.490 with automatic algorithm selection")
+    add_line(f"  - Conservation metric: Shannon entropy-based scoring (0-1 scale)")
+    
+    # Write to file if specified
+    if output_file:
+        try:
+            with open(output_file, 'w') as f:
+                for line in output_lines:
+                    f.write(line + '\n')
+            add_line(f"\nResults saved to: {output_file}")
+        except Exception as e:
+            add_line(f"\nError saving to file: {e}")
     
     return {
         'input_genomes': input_genomes,
         'core_stats': core_stats,
         'seq_stats': seq_stats,
         'msa_stats': msa_stats,
-        'cons_stats': cons_stats
+        'cons_stats': cons_stats,
+        'output_lines': output_lines
     }
 
 if __name__ == "__main__":
+    import sys
+    
     # Change to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     
-    stats = generate_manuscript_stats()
+    # Check for output file argument
+    output_file = None
+    if len(sys.argv) > 1:
+        output_file = sys.argv[1]
+    
+    stats = generate_manuscript_stats(output_file)

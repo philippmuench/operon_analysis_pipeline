@@ -10,7 +10,7 @@ from collections import defaultdict
 
 def count_input_genomes():
     """Count input genome assemblies."""
-    genome_dir = "../Efs_assemblies"
+    genome_dir = "../../Efs_assemblies"
     if not os.path.exists(genome_dir):
         return 0
     
@@ -46,10 +46,17 @@ def analyze_prokka_outputs():
     protein_counts = []
     genome_gene_data = []  # Store (genome_id, gene_count) for outlier detection
     
-    # Sample size for analysis (increase for more comprehensive check)
-    sample_size = min(1000, len(genome_dirs))  # Check up to 1000 genomes
+    # Analyze all genomes (remove sample size limit for comprehensive analysis)
+    sample_size = len(genome_dirs)  # Analyze all available genomes
     
-    for genome_dir in genome_dirs[:sample_size]:
+    print(f"Starting analysis of {sample_size} genomes...", flush=True)
+    progress_interval = max(1, sample_size // 20)  # Show progress 20 times
+    
+    for idx, genome_dir in enumerate(genome_dirs[:sample_size], 1):
+        # Show progress
+        if idx % progress_interval == 0 or idx == sample_size:
+            print(f"  Progress: {idx}/{sample_size} genomes analyzed ({idx*100//sample_size}%)", flush=True)
+        
         genome_path = os.path.join(output_dir, genome_dir)
         
         # Check if genome is complete
@@ -88,6 +95,8 @@ def analyze_prokka_outputs():
                     stats["total_proteins"] += protein_count
                 except:
                     pass
+    
+    print(f"Analysis complete. Calculating statistics...", flush=True)
     
     # Calculate averages and identify outliers
     if gene_counts:
@@ -144,72 +153,98 @@ def get_prokka_version():
     """Get Prokka version information."""
     try:
         import subprocess
+        # First try to activate conda environment and get version
+        conda_cmd = "eval \"$(/home/pmuench/miniconda3/bin/conda shell.bash hook)\" && conda activate efs_diversity && prokka --version 2>&1"
+        result = subprocess.run(conda_cmd, shell=True, 
+                              capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip():
+            # Prokka outputs version to stderr, but we're capturing both with 2>&1
+            version_line = result.stdout.strip().split('\n')[-1]
+            if 'prokka' in version_line.lower():
+                return version_line
+        
+        # Fallback to direct prokka call
         result = subprocess.run(['prokka', '--version'], 
                               capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
-            return result.stdout.strip().split('\n')[0]
+            # Check both stdout and stderr
+            output = result.stdout.strip() if result.stdout.strip() else result.stderr.strip()
+            if output:
+                return output.split('\n')[0]
     except:
         pass
     return "Prokka version not available"
 
-def generate_manuscript_stats():
-    """Generate all statistics for manuscript."""
+def generate_manuscript_stats(output_file=None):
+    """Generate all statistics for manuscript.
     
-    print("Prokka Annotation Statistics for Manuscript")
-    print("=" * 50)
+    Args:
+        output_file (str): Optional path to save output to file. If None, prints to console.
+    """
+    
+    # Collect all output lines
+    output_lines = []
+    
+    def add_line(text=""):
+        """Add a line to both console and file output."""
+        print(text)
+        output_lines.append(text)
+    
+    add_line("Prokka Annotation Statistics for Manuscript")
+    add_line("=" * 50)
     
     # Input genomes
     input_count = count_input_genomes()
-    print(f"\n1. Input Genomes:")
-    print(f"   Total E. faecalis assemblies: {input_count:,}")
+    add_line(f"\n1. Input Genomes:")
+    add_line(f"   Total E. faecalis assemblies: {input_count:,}")
     
     # Prokka version
     version = get_prokka_version()
-    print(f"\n2. Software Version:")
-    print(f"   {version}")
+    add_line(f"\n2. Software Version:")
+    add_line(f"   {version}")
     
     # Prokka outputs
-    print(f"\n3. Annotation Results:")
+    add_line(f"\n3. Annotation Results:")
     prokka_stats = analyze_prokka_outputs()
     
     if "error" not in prokka_stats:
-        print(f"   Total genomes processed: {prokka_stats['total_genomes']:,}")
-        print(f"   Sample analyzed: {prokka_stats.get('sample_size', 0):,}")
-        print(f"   Complete annotations: {prokka_stats['complete_genomes']:,}")
+        add_line(f"   Total genomes processed: {prokka_stats['total_genomes']:,}")
+        add_line(f"   Sample analyzed: {prokka_stats.get('sample_size', 0):,}")
+        add_line(f"   Complete annotations: {prokka_stats['complete_genomes']:,}")
         if prokka_stats['complete_genomes'] > 0:
             completion_rate = prokka_stats['complete_genomes'] / prokka_stats.get('sample_size', 1) * 100
-            print(f"   Success rate: {completion_rate:.1f}%")
+            add_line(f"   Success rate: {completion_rate:.1f}%")
         
         if prokka_stats['avg_genes_per_genome'] > 0:
-            print(f"   Average genes per genome: {prokka_stats['avg_genes_per_genome']:.0f}")
-            print(f"   Median genes per genome: {prokka_stats.get('median_genes_per_genome', 0):.0f}")
-            print(f"   Gene count range: {prokka_stats.get('min_genes_per_genome', 0):.0f}-{prokka_stats.get('max_genes_per_genome', 0):.0f}")
-            print(f"   Standard deviation: {prokka_stats.get('std_genes_per_genome', 0):.0f}")
-            print(f"   Total genes annotated: {prokka_stats['total_genes']:,}")
+            add_line(f"   Average genes per genome: {prokka_stats['avg_genes_per_genome']:.0f}")
+            add_line(f"   Median genes per genome: {prokka_stats.get('median_genes_per_genome', 0):.0f}")
+            add_line(f"   Gene count range: {prokka_stats.get('min_genes_per_genome', 0):.0f}-{prokka_stats.get('max_genes_per_genome', 0):.0f}")
+            add_line(f"   Standard deviation: {prokka_stats.get('std_genes_per_genome', 0):.0f}")
+            add_line(f"   Total genes annotated: {prokka_stats['total_genes']:,}")
             
             # Outlier analysis
             if prokka_stats.get('num_very_low_gene', 0) > 0:
-                print(f"\n   Quality Control - Potential Outliers:")
-                print(f"   Genomes with <1000 genes: {prokka_stats['num_very_low_gene']:,}")
-                print(f"   Statistical outliers: {prokka_stats.get('num_outliers', 0):,}")
+                add_line(f"\n   Quality Control - Potential Outliers:")
+                add_line(f"   Genomes with <1000 genes: {prokka_stats['num_very_low_gene']:,}")
+                add_line(f"   Statistical outliers: {prokka_stats.get('num_outliers', 0):,}")
                 
                 if prokka_stats.get('very_low_gene_genomes'):
-                    print(f"   Examples of low-gene genomes:")
+                    add_line(f"   Examples of low-gene genomes:")
                     for genome_id, gene_count in prokka_stats['very_low_gene_genomes'][:5]:
-                        print(f"     {genome_id}: {gene_count} genes")
+                        add_line(f"     {genome_id}: {gene_count} genes")
                 
                 # Percentile distribution
                 if prokka_stats.get('gene_count_percentiles'):
-                    print(f"   Gene count distribution:")
+                    add_line(f"   Gene count distribution:")
                     percentiles = prokka_stats['gene_count_percentiles']
-                    print(f"     1%: {percentiles['1%']:.0f}, 5%: {percentiles['5%']:.0f}, 10%: {percentiles['10%']:.0f}")
-                    print(f"     25%: {percentiles['25%']:.0f}, 50%: {percentiles['50%']:.0f}, 75%: {percentiles['75%']:.0f}")
-                    print(f"     90%: {percentiles['90%']:.0f}, 95%: {percentiles['95%']:.0f}, 99%: {percentiles['99%']:.0f}")
+                    add_line(f"     1%: {percentiles['1%']:.0f}, 5%: {percentiles['5%']:.0f}, 10%: {percentiles['10%']:.0f}")
+                    add_line(f"     25%: {percentiles['25%']:.0f}, 50%: {percentiles['50%']:.0f}, 75%: {percentiles['75%']:.0f}")
+                    add_line(f"     90%: {percentiles['90%']:.0f}, 95%: {percentiles['95%']:.0f}, 99%: {percentiles['99%']:.0f}")
     else:
-        print(f"   {prokka_stats['error']}")
+        add_line(f"   {prokka_stats['error']}")
     
     # Output file types
-    print(f"\n4. Output Files Generated per Genome:")
+    add_line(f"\n4. Output Files Generated per Genome:")
     file_types = {
         "gff": "Gene feature format (annotations)",
         "faa": "Protein sequences (amino acids)", 
@@ -222,28 +257,46 @@ def generate_manuscript_stats():
     }
     
     for ext, description in file_types.items():
-        print(f"   .{ext}: {description}")
+        add_line(f"   .{ext}: {description}")
     
     # Summary for manuscript
-    print("\n" + "=" * 50)
-    print("MANUSCRIPT NUMBERS SUMMARY:")
-    print("=" * 50)
-    print(f"Input assemblies: {input_count:,} E. faecalis genomes")
+    add_line("\n" + "=" * 50)
+    add_line("MANUSCRIPT NUMBERS SUMMARY:")
+    add_line("=" * 50)
+    add_line(f"Input assemblies: {input_count:,} E. faecalis genomes")
     if "error" not in prokka_stats and prokka_stats['avg_genes_per_genome'] > 0:
-        print(f"Successfully annotated: {prokka_stats['complete_genomes']:,} genomes")
-        print(f"Average genes per genome: {prokka_stats['avg_genes_per_genome']:.0f}")
-        print(f"Total genes predicted: {prokka_stats['total_genes']:,}")
-        print(f"Output file types: 8 per genome (.gff, .faa, .ffn, .fna, .gbk, .tsv, .txt, .log)")
+        add_line(f"Successfully annotated: {prokka_stats['complete_genomes']:,} genomes")
+        add_line(f"Average genes per genome: {prokka_stats['avg_genes_per_genome']:.0f}")
+        add_line(f"Total genes predicted: {prokka_stats['total_genes']:,}")
+        add_line(f"Output file types: 8 per genome (.gff, .faa, .ffn, .fna, .gbk, .tsv, .txt, .log)")
+    
+    # Write to file if specified
+    if output_file:
+        try:
+            with open(output_file, 'w') as f:
+                for line in output_lines:
+                    f.write(line + '\n')
+            add_line(f"\nResults saved to: {output_file}")
+        except Exception as e:
+            add_line(f"\nError saving to file: {e}")
     
     return {
         'input_count': input_count,
         'prokka_stats': prokka_stats,
-        'version': version
+        'version': version,
+        'output_lines': output_lines
     }
 
 if __name__ == "__main__":
+    import sys
+    
     # Change to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     
-    stats = generate_manuscript_stats()
+    # Check for output file argument
+    output_file = None
+    if len(sys.argv) > 1:
+        output_file = sys.argv[1]
+    
+    stats = generate_manuscript_stats(output_file)

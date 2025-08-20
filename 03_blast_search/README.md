@@ -46,6 +46,25 @@ The summary file contains:
 - Overall operon completeness (0-1)
 - Number of genes found
 
+## Manuscript Statistics
+Generate statistics for the manuscript after running BLAST searches:
+```bash
+# Generate with SLURM (recommended)
+sbatch run_manuscript_stats.sh
+
+# Or run directly (outputs to console)
+python manuscript_numbers.py
+
+# Save statistics to file
+python manuscript_numbers.py manuscript_stats.txt
+```
+
+The statistics include:
+- Number of BLAST hits across all search strategies
+- Hit quality metrics (identity, coverage)
+- Operon completeness across genomes
+- Summary of high-quality hits
+
 ## Notes
 - Prokka directory naming: `run_blast_search.sh` auto-detects each genome's prefix from `.fna`/`.faa`/`.gff` files and does not require a specific suffix (e.g., no `.result` needed).
 - Post-processing does not use a test mode; it processes everything present in `output/blast_results` and writes results into `../04_core_gene_analysis/output/` to keep outputs centralized.

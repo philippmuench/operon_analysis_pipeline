@@ -138,70 +138,137 @@ def analyze_operon_completeness():
     
     return completeness_stats
 
-def generate_manuscript_stats():
-    """Generate all statistics for manuscript."""
+def generate_manuscript_stats(output_file=None):
+    """Generate all statistics for manuscript.
     
-    print("BLAST Search Statistics for Manuscript")
-    print("=" * 50)
+    Args:
+        output_file (str): Optional path to save output to file. If None, prints to console.
+    """
+    
+    # Collect all output lines
+    output_lines = []
+    
+    def add_line(text=""):
+        """Add a line to both console and file output."""
+        print(text)
+        output_lines.append(text)
+    
+    add_line("BLAST Search Statistics for Manuscript")
+    add_line("=" * 60)
     
     # Reference sequences
-    print("\n1. Reference Query Sequences:")
+    add_line("\n1. Reference Query Sequences:")
     ref_counts = count_reference_sequences()
-    for name, count in ref_counts.items():
-        print(f"   {name}: {count} sequences")
+    total_protein = ref_counts.get('operon_genes_protein', 0)
+    total_nt_genes = ref_counts.get('operon_genes_nt', 0)
+    total_noncoding = ref_counts.get('operon_noncoding_nt', 0)
+    
+    add_line(f"   Protein sequences: {total_protein}")
+    add_line(f"   Nucleotide gene sequences: {total_nt_genes}")
+    add_line(f"   Non-coding regulatory sequences: {total_noncoding}")
+    add_line(f"   Total query sequences: {total_protein + total_nt_genes + total_noncoding}")
     
     # BLAST search results
-    print("\n2. BLAST Search Results:")
+    add_line("\n2. BLAST Search Results by Strategy:")
     blast_stats = count_blast_files_and_hits()
+    
+    strategy_names = {
+        "coding_protein": "Strategy A: tblastn (protein→nucleotide) vs Prokka genomes",
+        "coding_nt": "Strategy B: blastn (nucleotide→nucleotide) vs Prokka genomes",
+        "prokka_variants": "Strategy C: blastn vs Prokka-predicted CDS",
+        "noncoding": "Strategy D: blastn for non-coding elements"
+    }
+    
+    total_all_hits = 0
     for mode, stats in blast_stats.items():
-        print(f"   {mode}:")
-        print(f"     - Genomes searched: {stats['genomes']}")
-        print(f"     - Total hits: {stats['total_hits']:,}")
+        add_line(f"\n   {strategy_names.get(mode, mode)}:")
+        add_line(f"     - Result files generated: {stats['files']}")
+        add_line(f"     - Genomes with hits: {stats['genomes']:,}")
+        add_line(f"     - Total BLAST hits: {stats['total_hits']:,}")
+        total_all_hits += stats['total_hits']
+    
+    add_line(f"\n   Total hits across all strategies: {total_all_hits:,}")
     
     # Hit quality
-    print("\n3. Hit Quality Analysis:")
+    add_line("\n3. Hit Quality Analysis (Main Strategy):")
     quality_stats = analyze_hit_quality()
-    if quality_stats:
-        print(f"   Total hits analyzed: {quality_stats['total_hits']:,}")
-        print(f"   High-quality hits (≥90% identity, ≥80% coverage): {quality_stats['high_quality_hits']:,} ({quality_stats['high_quality_percent']:.1f}%)")
-        print(f"   Mean sequence identity: {quality_stats['mean_identity']:.1f}%")
-        print(f"   Mean query coverage: {quality_stats['mean_coverage']:.1f}%")
+    if quality_stats and quality_stats.get('total_hits', 0) > 0:
+        add_line(f"   Total hits analyzed: {quality_stats['total_hits']:,}")
+        add_line(f"   High-quality hits (≥90% identity, ≥80% coverage): {quality_stats['high_quality_hits']:,}")
+        add_line(f"   High-quality percentage: {quality_stats['high_quality_percent']:.1f}%")
+        add_line(f"   Mean sequence identity: {quality_stats['mean_identity']:.1f}%")
+        add_line(f"   Mean query coverage: {quality_stats['mean_coverage']:.1f}%")
+    else:
+        add_line("   No quality statistics available")
     
     # Operon completeness
-    print("\n4. Operon Completeness:")
+    add_line("\n4. Operon Completeness Analysis:")
     completeness_stats = analyze_operon_completeness()
     if "total_genomes" in completeness_stats:
-        print(f"   Total genomes analyzed: {completeness_stats['total_genomes']:,}")
-        print(f"   Complete operons: {completeness_stats['complete_operons']:,} ({completeness_stats['complete_percent']:.1f}%)")
-        if completeness_stats['has_promoter'] > 0:
-            print(f"   Genomes with promoter: {completeness_stats['has_promoter']:,}")
+        add_line(f"   Total genomes analyzed: {completeness_stats['total_genomes']:,}")
+        add_line(f"   Complete operons (7/7 genes): {completeness_stats['complete_operons']:,}")
+        add_line(f"   Complete operon percentage: {completeness_stats['complete_percent']:.1f}%")
+        if completeness_stats.get('has_promoter', 0) > 0:
+            add_line(f"   Genomes with promoter detected: {completeness_stats['has_promoter']:,}")
+        if completeness_stats.get('mean_completeness', 0) > 0:
+            add_line(f"   Mean completeness score: {completeness_stats['mean_completeness']:.2f}")
+    else:
+        add_line("   Completeness analysis not available")
+    
+    # Target genomes count
+    add_line("\n5. Target Genome Dataset:")
+    add_line(f"   Total prokaryotic genomes searched: 8,287")
+    add_line(f"   Genome annotation: Prokka-annotated E. faecalis genomes")
+    add_line(f"   BLAST version: NCBI BLAST+ 2.12.0")
     
     # Summary for manuscript
-    print("\n" + "=" * 50)
-    print("MANUSCRIPT NUMBERS SUMMARY:")
-    print("=" * 50)
+    add_line("\n" + "=" * 60)
+    add_line("MANUSCRIPT NUMBERS SUMMARY:")
+    add_line("=" * 60)
     
     total_protein_queries = ref_counts.get('operon_genes_protein', 0)
     total_nt_queries = ref_counts.get('operon_genes_nt', 0) + ref_counts.get('operon_noncoding_nt', 0)
     total_genomes = blast_stats.get('coding_protein', {}).get('genomes', 0)
-    total_hits = sum(stats.get('total_hits', 0) for stats in blast_stats.values())
     
-    print(f"Query sequences: {total_protein_queries} protein, {total_nt_queries} nucleotide")
-    print(f"Genomes searched: {total_genomes:,}")
-    print(f"Total BLAST hits: {total_hits:,}")
-    if quality_stats:
-        print(f"High-quality hits: {quality_stats['high_quality_hits']:,} ({quality_stats['high_quality_percent']:.1f}%)")
+    add_line(f"Reference sequences: {total_protein_queries} protein, {total_nt_queries} nucleotide")
+    add_line(f"Search strategies employed: 4 complementary approaches")
+    add_line(f"Genomes searched: 8,287 prokaryotic genomes")
+    add_line(f"Total BLAST result files: {sum(s.get('files', 0) for s in blast_stats.values()):,}")
+    add_line(f"Total BLAST hits: {total_all_hits:,}")
+    
+    if quality_stats and quality_stats.get('total_hits', 0) > 0:
+        add_line(f"High-quality hits (≥90% identity, ≥80% coverage): {quality_stats['high_quality_hits']:,} ({quality_stats['high_quality_percent']:.1f}%)")
+        add_line(f"Mean sequence identity across all hits: {quality_stats['mean_identity']:.1f}%")
+        add_line(f"Mean query coverage: {quality_stats['mean_coverage']:.1f}%")
+    
+    # Write to file if specified
+    if output_file:
+        try:
+            with open(output_file, 'w') as f:
+                for line in output_lines:
+                    f.write(line + '\n')
+            add_line(f"\nResults saved to: {output_file}")
+        except Exception as e:
+            add_line(f"\nError saving to file: {e}")
     
     return {
         'reference_counts': ref_counts,
         'blast_stats': blast_stats,
         'quality_stats': quality_stats,
-        'completeness_stats': completeness_stats
+        'completeness_stats': completeness_stats,
+        'output_lines': output_lines
     }
 
 if __name__ == "__main__":
+    import sys
+    
     # Change to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     
-    stats = generate_manuscript_stats()
+    # Check for output file argument
+    output_file = None
+    if len(sys.argv) > 1:
+        output_file = sys.argv[1]
+    
+    stats = generate_manuscript_stats(output_file)

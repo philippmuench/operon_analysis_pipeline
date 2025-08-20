@@ -8,6 +8,7 @@ This directory contains scripts for annotating E. faecalis genomes using Prokka.
 ## Output
 - **Production mode**: `../prokka_output/` - One subdirectory per genome
 - **Test mode**: `output/prokka_results/` - Results for first 50 genomes only
+- **Manuscript statistics**: `manuscript_stats.txt` - Automatically generated summary
 - **Each genome directory contains**:
   - `.gff` - Gene annotations
   - `.faa` - Protein sequences (amino acids)
@@ -28,6 +29,27 @@ sbatch run_prokka.sh --test
 ```
 
 This SLURM array job processes genomes in batches of 100, running up to 20 batches in parallel. The `--test` parameter is useful for testing the pipeline on a smaller subset of genomes.
+
+### Manuscript Statistics
+After running Prokka annotations with `run_prokka.sh`, generate statistics for the manuscript:
+```bash
+# Run with proper conda environment (recommended after prokka completes)
+sbatch run_manuscript_stats.sh
+
+# Or generate statistics manually (outputs to console)
+python manuscript_numbers.py
+
+# Save statistics to a file directly
+python manuscript_numbers.py manuscript_stats.txt
+```
+
+The statistics include:
+- Total number of input genomes
+- Prokka version information  
+- Annotation success rates
+- Average genes per genome
+- Gene count distributions and outlier analysis
+- Output file type descriptions
 
 ## Monitoring
 ```bash

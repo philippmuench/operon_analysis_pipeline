@@ -110,99 +110,129 @@ def analyze_gene_content():
     
     return gene_info
 
-def generate_manuscript_stats():
-    """Generate all statistics for manuscript."""
+def generate_manuscript_stats(output_file=None):
+    """Generate all statistics for manuscript.
     
-    print("Reference Operon Extraction Statistics for Manuscript")
-    print("=" * 60)
+    Args:
+        output_file (str): Optional path to save output to file. If None, prints to console.
+    """
+    
+    # Collect all output lines
+    output_lines = []
+    
+    def add_line(text=""):
+        """Add a line to both console and file output."""
+        print(text)
+        output_lines.append(text)
+    
+    add_line("Reference Operon Extraction Statistics for Manuscript")
+    add_line("=" * 60)
     
     # GenBank input analysis
-    print("\n1. Reference Genome Source:")
+    add_line("\n1. Reference Genome Source:")
     gb_stats = analyze_genbank_file()
     if "error" not in gb_stats:
-        print(f"   Organism: {gb_stats.get('organism', 'Unknown')}")
-        print(f"   Accession: {gb_stats.get('accession', 'Unknown')}")
-        print(f"   Sequence length: {gb_stats.get('sequence_length', 0):,} bp")
+        add_line(f"   Organism: {gb_stats.get('organism', 'Unknown')}")
+        add_line(f"   Accession: {gb_stats.get('accession', 'Unknown')}")
+        add_line(f"   Sequence length: {gb_stats.get('sequence_length', 0):,} bp")
         if 'features' in gb_stats:
-            print(f"   GenBank features: {sum(gb_stats['features'].values())} total")
+            add_line(f"   GenBank features: {sum(gb_stats['features'].values())} total")
             for ftype, count in sorted(gb_stats['features'].items()):
-                print(f"     {ftype}: {count}")
+                add_line(f"     {ftype}: {count}")
     else:
-        print(f"   {gb_stats['error']}")
+        add_line(f"   {gb_stats['error']}")
     
     # Gene content analysis
-    print("\n2. Operon Gene Content:")
+    add_line("\n2. Operon Gene Content:")
     gene_info = analyze_gene_content()
-    print(f"   Operon: {gene_info['operon_name']}")
-    print(f"   Coding genes: {gene_info['total_genes']}")
-    print(f"   Regulatory elements: {gene_info['total_regulatory']}")
-    print(f"   Biological pathway: {gene_info['pathway']}")
+    add_line(f"   Operon: {gene_info['operon_name']}")
+    add_line(f"   Coding genes: {gene_info['total_genes']}")
+    add_line(f"   Regulatory elements: {gene_info['total_regulatory']}")
+    add_line(f"   Biological pathway: {gene_info['pathway']}")
     
-    print("\n   Gene composition:")
+    add_line("\n   Gene composition:")
     for gene in gene_info['genes']:
         if gene['type'] == 'CDS':
-            print(f"     {gene['name']}: {gene['product']}")
+            add_line(f"     {gene['name']}: {gene['product']}")
     
-    print("\n   Regulatory elements:")
+    add_line("\n   Regulatory elements:")
     for gene in gene_info['genes']:
         if gene['type'] == 'regulatory':
-            print(f"     {gene['name']}: {gene['product']}")
+            add_line(f"     {gene['name']}: {gene['product']}")
     
     # Output files analysis
-    print("\n3. Generated Query Sequences:")
+    add_line("\n3. Generated Query Sequences:")
     output_stats = analyze_output_files()
     
     for filename, stats in output_stats.items():
         if stats['exists']:
-            print(f"   {filename}:")
-            print(f"     Description: {stats['description']}")
+            add_line(f"   {filename}:")
+            add_line(f"     Description: {stats['description']}")
             
             if 'sequence_count' in stats:
-                print(f"     Sequences: {stats['sequence_count']}")
-                print(f"     Average length: {stats['avg_length']:.0f} residues/bp")
-                print(f"     Length range: {stats['min_length']}-{stats['max_length']}")
-                print(f"     Total length: {stats['total_length']:,} residues/bp")
+                add_line(f"     Sequences: {stats['sequence_count']}")
+                add_line(f"     Average length: {stats['avg_length']:.0f} residues/bp")
+                add_line(f"     Length range: {stats['min_length']}-{stats['max_length']}")
+                add_line(f"     Total length: {stats['total_length']:,} residues/bp")
             
             if 'gene_count' in stats:
-                print(f"     Genes catalogued: {stats['gene_count']}")
+                add_line(f"     Genes catalogued: {stats['gene_count']}")
         else:
-            print(f"   {filename}: Not found")
+            add_line(f"   {filename}: Not found")
     
     # Summary for manuscript
-    print("\n" + "=" * 60)
-    print("MANUSCRIPT NUMBERS SUMMARY:")
-    print("=" * 60)
+    add_line("\n" + "=" * 60)
+    add_line("MANUSCRIPT NUMBERS SUMMARY:")
+    add_line("=" * 60)
     
     protein_stats = output_stats.get('operon_genes_protein.fasta', {})
     nt_stats = output_stats.get('operon_genes_nt.fasta', {})
     noncoding_stats = output_stats.get('operon_noncoding_nt.fasta', {})
     
-    print(f"Reference organism: {gb_stats.get('organism', 'E. faecalis V583')}")
-    print(f"Operon genes extracted: {gene_info['total_genes']}")
-    print(f"Regulatory elements: {gene_info['total_regulatory']}")
+    add_line(f"Reference organism: {gb_stats.get('organism', 'E. faecalis V583')}")
+    add_line(f"Operon genes extracted: {gene_info['total_genes']}")
+    add_line(f"Regulatory elements: {gene_info['total_regulatory']}")
     
     if protein_stats.get('sequence_count'):
-        print(f"Protein query sequences: {protein_stats['sequence_count']}")
-        print(f"Average protein length: {protein_stats['avg_length']:.0f} amino acids")
+        add_line(f"Protein query sequences: {protein_stats['sequence_count']}")
+        add_line(f"Average protein length: {protein_stats['avg_length']:.0f} amino acids")
     
     if nt_stats.get('sequence_count'):
-        print(f"Nucleotide gene sequences: {nt_stats['sequence_count']}")
-        print(f"Average gene length: {nt_stats['avg_length']:.0f} bp")
+        add_line(f"Nucleotide gene sequences: {nt_stats['sequence_count']}")
+        add_line(f"Average gene length: {nt_stats['avg_length']:.0f} bp")
     
     if noncoding_stats.get('sequence_count'):
-        print(f"Regulatory sequences: {noncoding_stats['sequence_count']}")
+        add_line(f"Regulatory sequences: {noncoding_stats['sequence_count']}")
     
-    print(f"Output formats: TSV table + 3 FASTA files (protein, nucleotide, regulatory)")
+    add_line(f"Output formats: TSV table + 3 FASTA files (protein, nucleotide, regulatory)")
+    
+    # Write to file if specified
+    if output_file:
+        try:
+            with open(output_file, 'w') as f:
+                for line in output_lines:
+                    f.write(line + '\n')
+            add_line(f"\nResults saved to: {output_file}")
+        except Exception as e:
+            add_line(f"\nError saving to file: {e}")
     
     return {
         'genbank_stats': gb_stats,
         'gene_info': gene_info,
-        'output_stats': output_stats
+        'output_stats': output_stats,
+        'output_lines': output_lines
     }
 
 if __name__ == "__main__":
+    import sys
+    
     # Change to script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(script_dir)
     
-    stats = generate_manuscript_stats()
+    # Check for output file argument
+    output_file = None
+    if len(sys.argv) > 1:
+        output_file = sys.argv[1]
+    
+    stats = generate_manuscript_stats(output_file)
