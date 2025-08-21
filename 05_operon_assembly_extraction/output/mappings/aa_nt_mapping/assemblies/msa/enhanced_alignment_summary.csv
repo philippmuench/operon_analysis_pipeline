@@ -1,9 +1,0 @@
-gene,type,n_sequences,alignment_length,avg_original_length,min_original_length,max_original_length,alignment_file
-frpC,coding,7,1002,1002.0,1002,1002,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/frpC_aligned.fasta
-ptsD,coding,7,831,831.0,831,831,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/ptsD_aligned.fasta
-fruR,coding,7,2769,2769.0,2769,2769,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/fruR_aligned.fasta
-ptsB,coding,7,468,468.0,468,468,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/ptsB_aligned.fasta
-ptsA,coding,7,462,462.0,462,462,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/ptsA_aligned.fasta
-glpC,coding,7,1074,1074.0,1074,1074,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/glpC_aligned.fasta
-ptsC,coding,7,771,771.0,771,771,output/mappings/aa_nt_mapping/assemblies/msa/dna_alignments/ptsC_aligned.fasta
-promoter,noncoding,8286,579,567.3,214,572,output/mappings/aa_nt_mapping/assemblies/msa/noncoding_alignments/promoter_aligned.fasta
