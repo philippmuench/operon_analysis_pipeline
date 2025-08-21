@@ -30,8 +30,10 @@ def analyze_blast_extraction_results():
         }
     }
     
-    # Analyze BLAST result files
-    blast_files = glob.glob(os.path.join(blast_dir, "*_blast.txt"))
+    # Analyze BLAST result files - match patterns used in the pipeline
+    blast_files = []
+    for pat in ("*_genes_blast.txt", "*_blast.txt", "*.blast"):
+        blast_files.extend(glob.glob(os.path.join(blast_dir, pat)))
     stats["total_blast_files"] = len(blast_files)
     
     for blast_file in blast_files[:50]:  # Sample for speed
@@ -228,8 +230,8 @@ def get_extraction_methods():
     methods = {
         "coordinate_based": {
             "description": "BLAST hit coordinates mapped to genome assemblies",
-            "threshold_identity": "≥30%",
-            "threshold_coverage": "≥50%",
+            "threshold_identity": "≥90%",
+            "threshold_coverage": "≥80%",
             "strand_handling": "Automatic reverse complement for negative strand hits"
         },
         "prokka_based": {

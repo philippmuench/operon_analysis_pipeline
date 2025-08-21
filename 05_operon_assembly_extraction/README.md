@@ -1,200 +1,171 @@
-# Step 5: Operon Assembly-based Extraction and MSA Creation
+# Step 05: Operon Sequence Extraction and Multiple Sequence Alignment
 
-This directory contains scripts for extracting operon gene and promoter sequences directly from assemblies using BLAST-derived coordinates, and for creating multiple sequence alignments for downstream analysis.
+This step extracts operon gene sequences from genome assemblies based on BLAST search results and creates multiple sequence alignments (MSAs) for downstream phylogenetic and evolutionary analyses.
 
 ## Overview
 
-This step processes BLAST search results to extract actual sequences for operon genes and create MSAs for diversity analysis. It separates the sequence extraction process from the downstream analysis.
-
-## Input Data
-
-- BLAST results from `../03_blast_search/output/`
-- Prokka annotations from `../01_prokka_annotation/output/prokka_results/`
- - Reference sequences from `../02_reference_operon_extraction/output/`
-
-## Output Files
-
-All outputs are written to the `output/` directory:
-- `sequences/`: FASTA files for each operon gene
-- `msa/`: Multiple sequence alignments
-- `noncoding_sequences/`: Non-coding sequences (promoter, etc.)
-- `msa/noncoding_alignments/`: MSAs for non-coding regions
-- `extraction_summary.txt`: Summary of extraction process
-
-### Multi-strategy mapping outputs
-
-Four different extraction strategies organized under `output/mappings/`:
-
-```
-output/mappings/
-├── aa_nt_mapping/
-│   ├── prokka/            # Strategy A: tblastn (protein→nt), Prokka genomes
-│   │   ├── sequences/
-│   │   ├── msa/
-│   │   ├── plots/         # SNP-based conservation plots
-│   │   └── enhanced_plots/ # Shannon entropy + sequence logos
-│   └── assemblies/        # Strategy D: tblastn (protein→nt), raw assemblies  
-│       ├── sequences/
-│       ├── msa/
-│       ├── plots/
-│       └── enhanced_plots/
-└── nt_nt_mapping/
-    ├── prokka_genome/     # Strategy B: blastn (nt→nt), Prokka genomes
-    │   ├── sequences/
-    │   ├── msa/
-    │   ├── plots/
-    │   └── enhanced_plots/
-    └── prokka_variants/   # Strategy C: blastn (reverse), capture variants
-        ├── gene_variants/
-        ├── msa_variants/
-        ├── plots/
-        └── enhanced_plots/
-```
-
-See `output/mappings/README.md` for detailed strategy explanations.
-
-## Scripts
-
-### Core Extraction Scripts
-
-#### `extract_operon_sequences.py`
-Extracts coding gene sequences for operon genes from Prokka output based on BLAST results.
-- Uses BLAST coordinates to locate genes in genomes
-- Extracts actual nucleotide sequences
-- Creates FASTA files for each gene
-
-#### `extract_noncoding_sequences.py`
-Extracts non-coding sequences (promoter regions) from BLAST results.
-- Processes non-coding BLAST hits (e.g., `*_noncoding_blast.txt`)
-- Extracts promoter sequences from genome files
-- Handles coordinate mapping and strand orientation
-
-#### `extract_promoter_from_blast.py`
-Specialized promoter extraction from individual BLAST files.
-- Processes promoter-specific BLAST results
-- Extracts sequences with quality filtering
-- Creates promoter-specific FASTA files
-
-#### `extract_sequences_from_blast.py`
-Alternative extraction method that works directly from BLAST results.
-- Quick extraction without needing original genome files
-- Good for initial analysis and validation
-
-### MSA Creation Scripts
-
-#### `create_msa.py`
-Create MSAs for coding and non-coding sequences using MAFFT.
- - Handles both coding and non-coding sequences
- - Parallel processing for efficiency
- - Quality control and validation
-
-#### `create_promoter_msa_from_blast.py`
-Specialized script for promoter sequence MSAs.
-- Extracts promoter sequences from individual BLAST files
-- Creates MSAs specifically for non-coding regions
-- Generates conservation plots with Pribnow box highlighting
-
-### Promoter Analysis and Visualization
-
-#### `create_promoter_plot.py`
-Creates basic promoter conservation plots.
-- Generates position-wise conservation profiles
-- Basic visualization for promoter analysis
-
-#### `create_promoter_plot_with_pribnow.py`
-Enhanced promoter plotting with Pribnow box annotation.
-- Highlights the Pribnow box (-10 consensus sequence)
-- Shows conservation patterns around regulatory elements
-- Publication-ready plots with detailed annotations
-
-#### `create_enhanced_conservation_plots.py`
-Advanced conservation visualization with Shannon entropy and sequence logos.
-- Shannon entropy-based conservation scores (frequency-weighted)
-- Sequence logos showing nucleotide frequency patterns
-- Two-panel plots: conservation profile + sequence motifs
-- More biologically meaningful than simple SNP counting
+The pipeline performs **Strategy D** (assembly-based tblastn) as the primary analysis:
+- Extracts sequences directly from raw genome assemblies using BLAST coordinates
+- Creates MSAs for both DNA and protein sequences
+- Generates conservation plots and metrics
+- Optionally includes gene boundary validation using Prokka annotations
 
 ## Usage
 
-### SLURM (HPC) submission
-Submit the full pipeline (all 7 steps):
-
+### Basic Run (Primary Analysis Only)
 ```bash
 sbatch run_operon_extraction.sh
 ```
 
-Override resources if needed:
-
+### Include Gene Boundary Analysis
 ```bash
-sbatch -c 32 --mem=48G --time=12:00:00 run_operon_extraction.sh
+sbatch run_operon_extraction.sh --with-gene-boundary
 ```
 
-Monitor job and logs:
-
+### Run Specific Steps
 ```bash
-squeue -j <JOBID>
-tail -f operon_extraction_<JOBID>.out
+# Only create plots and metrics (step 4)
+sbatch run_operon_extraction.sh --start-step 4
+
+# Run from MSA creation onwards (steps 2-5)
+sbatch run_operon_extraction.sh --start-step 2
 ```
 
-### Step-by-step execution
-Start from a specific step:
+## Pipeline Steps
 
-```bash
-sbatch run_operon_extraction.sh --start-step 3    # Start from promoter analysis
-sbatch run_operon_extraction.sh --start-step 6    # Run only multi-strategy comparison
-sbatch run_operon_extraction.sh --start-step 7    # Run only enhanced plots
+1. **Extract sequences from assemblies** - Uses tblastn results to extract DNA sequences directly from genome assemblies
+2. **Create MSAs** - Aligns extracted sequences using MAFFT
+3. **Extract promoter sequences** - Processes non-coding regulatory regions
+4. **Create conservation plots** - Generates Shannon entropy plots and sequence logos
+5. **Generate summary** - Creates comprehensive extraction statistics
 
-# Run specific strategies only
-sbatch run_operon_extraction.sh --strategies A,D  # Run only strategies A and D
+## Output Structure
+
+```
+output/
+├── sequences/                    # Extracted DNA sequences (one file per gene)
+│   ├── frpC.fasta
+│   ├── glpC.fasta
+│   ├── ptsA.fasta
+│   ├── ptsB.fasta
+│   ├── ptsC.fasta
+│   ├── ptsD.fasta
+│   └── fruR.fasta
+├── msa/                          # Multiple sequence alignments
+│   ├── dna_alignments/           # DNA alignments for dN/dS analysis
+│   ├── protein_alignments/       # Protein alignments
+│   └── noncoding_alignments/     # Promoter alignments
+├── plots/                        # Conservation visualizations
+│   ├── *_shannon_entropy_conservation.png
+│   └── *_nucleotide_frequency_logo.png
+├── noncoding_sequences/          # Extracted regulatory sequences
+├── operon_conservation_metrics.csv  # Conservation statistics
+└── extraction_pipeline_summary.txt  # Comprehensive summary
+
+# Optional gene boundary analysis
+output/gene_boundary_analysis/
+├── sequences/                    # Prokka-based extracted sequences
+├── msa/                         # Alignments using Prokka boundaries
+├── plots/                       # Conservation plots for validation
+└── gene_boundary_conservation_metrics.csv
 ```
 
-### Pipeline Steps
-1. **Gene sequence extraction** - Extract operon genes from assemblies using BLAST coordinates
-2. **MSA creation** - Create DNA and protein alignments using MAFFT
-3. **Promoter analysis** - Extract and align non-coding regulatory sequences  
-4. **Conservation plots** - Generate basic SNP-based conservation visualizations
-5. **BLAST diversity analysis** - Supplementary sequence diversity analysis
-6. **Multi-strategy comparison** - 4 different extraction/alignment strategies for comparison
-7. **Enhanced conservation plots** - Shannon entropy analysis and sequence logos for strategies A, B, D
+## Key Files
 
-### Individual Steps
+### Input Requirements
+- BLAST results from step 03: `../03_blast_search/output/blast_results/`
+- Genome assemblies: `../../Efs_assemblies/`
+- Prokka annotations: `../01_prokka_annotation/output/prokka_results/`
+
+### Main Outputs
+- **DNA alignments**: `output/msa/dna_alignments/*_aligned.fasta` - Used for dN/dS analysis
+- **Conservation metrics**: `output/operon_conservation_metrics.csv` - Shannon entropy scores
+- **Extraction summary**: `output/extraction_pipeline_summary.txt` - Pipeline statistics
+
+## Analysis Strategy
+
+### Primary Analysis (Strategy D)
+- **Method**: tblastn (protein → nucleotide)
+- **Source**: Raw genome assemblies
+- **Purpose**: Phylogenetic and evolutionary analyses
+- **Advantages**: 
+  - No annotation bias
+  - Captures actual genomic sequences
+  - Suitable for dN/dS calculations
+
+### Optional Gene Boundary Analysis (Strategy A)
+- **Method**: tblastn with Prokka annotations
+- **Source**: Prokka-annotated genomes
+- **Purpose**: Validate gene boundaries
+- **Use**: Quality control only
+
+## Conservation Metrics
+
+The pipeline calculates:
+- **Shannon entropy**: Position-specific conservation (0=variable, 1=conserved)
+- **Pairwise identity**: Average sequence similarity
+- **Gap percentage**: Alignment quality indicator
+- **Sequence coverage**: Number of genomes with each gene
+
+## Dependencies
+
+Required tools (available in `efs_diversity` conda environment):
+- Python 3.10+ with BioPython
+- MAFFT 7.490+
+- matplotlib, seaborn for plotting
+
+## Example Commands
+
 ```bash
-# Step 1: Extract coding sequences
-python extract_operon_sequences.py --prokka-dir ../01_prokka_annotation/output/prokka_results
+# Full pipeline with gene boundary validation
+sbatch run_operon_extraction.sh --with-gene-boundary
 
-# Step 2: Extract non-coding sequences
-python extract_noncoding_sequences.py
+# Only regenerate plots from existing alignments
+sbatch run_operon_extraction.sh --start-step 4
 
-# Step 3: Create MSAs for coding genes
-python create_msa.py --sequences-dir output/sequences
+# Check job status
+squeue -u $USER | grep operon
+
+# View results summary
+cat output/extraction_pipeline_summary.txt
 ```
 
-### Promoter Analysis
-```bash
-# Extract and analyze promoter sequences
-python extract_noncoding_sequences.py
-python create_promoter_msa_from_blast.py
+## Pipeline Architecture
 
-# Create promoter conservation plots
-python create_promoter_plot_with_pribnow.py --blast-based
+### Consolidated Implementation
+All extraction and analysis functionality is consolidated in `operon_pipeline.py`:
+```bash
+# View available commands
+python operon_pipeline.py --help
+
+# Run individual steps manually
+python operon_pipeline.py extract-sequences --blast-dir ../03_blast_search/output/blast_results \
+    --assemblies-dir ../../Efs_assemblies --output-dir output/sequences
+
+python operon_pipeline.py create-msa --sequences-dir output/sequences \
+    --output-dir output/msa --threads 8
+
+python operon_pipeline.py create-plots --msa-dir output/msa/dna_alignments \
+    --output-dir output/plots
+
+# Require complete operons only (all 7 genes present)
+python operon_pipeline.py extract-sequences --require-complete \
+    --blast-dir ../03_blast_search/output/blast_results \
+    --assemblies-dir ../../Efs_assemblies --output-dir output/sequences
 ```
 
-## Key Features
-
-- **Multiple extraction methods**: Direct from genomes or from BLAST results
-- **Comprehensive sequence types**: Coding genes and non-coding regions
-- **Quality control**: Identity and coverage thresholds
-- **Parallel processing**: Efficient handling of multiple genes/genomes
-- **MSA validation**: Automatic quality checks for alignments
-
-## Integration
-
-This step provides input for:
-- `../06_diversity_analysis/`: Conservation and diversity analysis
-- `../07_dnds_analysis/`: dN/dS ratio calculations
+### Generate Manuscript Statistics
+```bash
+# Generate statistics for Methods section
+python manuscript_numbers.py
+```
 
 ## Notes
 
-- Extraction depends on successful BLAST searches from step 03
-- MSA quality depends on sequence similarity and alignment parameters
-- Output sequences are used as input for all downstream diversity analyses
+- The pipeline uses `/vol/tmp` for MAFFT temporary files (faster I/O)
+- Extraction thresholds: ≥90% identity, ≥80% coverage
+- Promoter extraction uses relaxed thresholds: ≥80% identity, ≥70% coverage
+- Processing time: ~4-6 hours for complete pipeline with 8,500+ genomes
+- Main script: `run_operon_extraction.sh` (SLURM submission)
+- Python implementation: `operon_pipeline.py` (consolidated pipeline with subcommands)
+- Statistics generator: `manuscript_numbers.py` (for publication figures)
