@@ -24,53 +24,46 @@ All outputs are written to the `output/` directory:
 
 ## Scripts
 
-### `identify_core_genes.py`
-Identifies genes present in ≥95% of genomes from Prokka GFF files.
-Automatically detects and reports the number of genomes being processed.
+### `core_gene_pipeline.py`
+Consolidated pipeline script that performs all analysis steps:
+1. Identifies genes present in ≥95% of genomes from Prokka GFF files
+2. Extracts nucleotide sequences for all core genes
+3. Creates multiple sequence alignments using MAFFT
+4. Calculates diversity metrics
+5. Generates threshold analysis plots
 
-### `extract_core_sequences.py`
-Extracts nucleotide sequences for all core genes from Prokka output.
-Uses parallel processing to efficiently extract from all genomes.
+### `run_pipeline.sh`
+SLURM submission script to run the pipeline with configurable options.
 
-### `create_core_gene_msa.py`
-Creates multiple sequence alignments for all core genes using MAFFT.
-Processes genes in parallel for efficiency.
-
-### `run_core_analysis.sh`
-SLURM script to run the full analysis pipeline.
+### `manuscript_numbers.py`
+Generates statistics for the manuscript methods section (run after pipeline completes).
 
 ## Usage
 
 ### Complete Pipeline (Recommended)
 ```bash
 # Run full analysis pipeline via SLURM
-sbatch run_core_analysis.sh
+sbatch run_pipeline.sh
+
+# Or with custom options
+sbatch run_pipeline.sh --threshold 0.99  # Use 99% threshold
+sbatch run_pipeline.sh --start-step 3    # Start from MSA creation
 ```
 
-### Manual Steps
+### Direct Python Execution
 ```bash
-# Step 1: Identify core genes (processes all genomes in step 01 output)
-python identify_core_genes.py
+# Run the complete pipeline
+python core_gene_pipeline.py
 
-# Step 2: Extract sequences
-python extract_core_sequences.py
-
-# Step 3: Create MSAs
-python create_core_gene_msa.py
+# Or with custom options
+python core_gene_pipeline.py --threshold 0.99 --threads 40
+python core_gene_pipeline.py --start-step 3  # Start from MSA creation
+python core_gene_pipeline.py --help  # See all options
 ```
 
-## Key Findings (from test run)
-- 2,481 unique genes found across 50 test genomes
-- 1,269 genes present in ≥95% of test genomes
-- 1,058 genes present in 100% of test genomes
-- Operon genes (frpC, glpC, etc.) are NOT core genes (present in 96% of test genomes)
 ## Threshold Analysis
 
-The pipeline now includes comprehensive threshold analysis to understand how different prevalence thresholds affect core gene definitions:
-
-### New Script: plot_core_gene_thresholds.py
-
-**Purpose**: Analyze the impact of different prevalence thresholds on core gene counts
+The consolidated pipeline includes comprehensive threshold analysis (Step 5) to understand how different prevalence thresholds affect core gene definitions:
 
 **Features**:
 - Creates accumulation curves showing core gene counts vs. prevalence thresholds
@@ -80,31 +73,19 @@ The pipeline now includes comprehensive threshold analysis to understand how dif
 
 **Output Files**:
 - `core_gene_threshold_curve.png` - Full threshold range (0-100%)
-- `core_gene_threshold_curve_zoomed.png` - Zoomed view (85-100%)
 - `core_gene_threshold_summary.csv` - Summary table with key statistics
 
-**Usage**:
-```bash
-python plot_core_gene_thresholds.py \
-    --core-genes-file output/gene_prevalence_stats.csv \
-    --prokka-dir ../01_prokka_annotation/output/prokka_results \
-    --output-dir output
-```
-
-**Integration**: Automatically run as part of `run_core_analysis.sh` pipeline.
+This analysis is automatically run as Step 5 of the pipeline.
 
 ## Manuscript Statistics
 
 Generate statistics for the manuscript after running core gene analysis:
 ```bash
-# Generate with SLURM (recommended)
-sbatch run_manuscript_stats.sh
-
-# Or run directly (outputs to console)
+# Run directly (outputs to console)
 python manuscript_numbers.py
 
 # Save statistics to file
-python manuscript_numbers.py manuscript_stats.txt
+python manuscript_numbers.py > manuscript_stats.txt
 ```
 
 The statistics include:

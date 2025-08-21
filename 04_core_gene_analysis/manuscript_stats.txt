@@ -1,0 +1,57 @@
+Core Gene Analysis Statistics for Manuscript
+============================================================
+
+1. Input Data:
+   Genomes analyzed: 8,587
+   Source: Prokka-annotated E. faecalis genomes
+
+2. Core Gene Identification:
+   Total unique genes across all genomes: 5,564
+   Core genes (≥95% prevalence): 1,252
+   Genes in 100% of genomes: 225
+   Rare genes (<10% prevalence): 3,741
+
+   Prevalence distribution:
+     ≥99%: 1,078 genes
+     ≥95%: 1,252 genes
+     ≥90%: 1,288 genes
+     ≥80%: 1,347 genes
+     ≥50%: 1,492 genes
+     ≥100%: 225 genes
+
+   Mean gene prevalence: 0.275
+
+3. Sequence Extraction:
+   Core genes with sequences extracted: 1,252
+   Average sequences per gene: 8546
+   Average sequence length: 960 bp
+   Length range: 171-2340 bp
+
+4. Multiple Sequence Alignments:
+   Alignments created: 1,252
+   Alignment software: MAFFT v7.490
+   Algorithm selection: Automatic (--auto)
+
+5. Conservation Analysis:
+   Genes analyzed: 66
+   Mean conservation score: 0.940
+   Standard deviation: 0.090
+
+   Conservation scoring method: Shannon entropy
+   Score range: 0 (highly variable) to 1 (perfectly conserved)
+
+============================================================
+MANUSCRIPT NUMBERS SUMMARY:
+============================================================
+Input genomes: 8,587 E. faecalis
+Unique genes identified: 5,564
+Core genes (≥95% prevalence): 1,252
+Genes in 100% of genomes: 225
+Total core gene sequences extracted: ~10,700,092
+Multiple sequence alignments created: 1,252
+Mean conservation score: 0.940
+
+Methodology:
+  - Core gene threshold: ≥95% prevalence
+  - Alignment software: MAFFT v7.490 with automatic algorithm selection
+  - Conservation metric: Shannon entropy-based scoring (0-1 scale)
