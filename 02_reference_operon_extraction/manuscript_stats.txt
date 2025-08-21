@@ -1,0 +1,65 @@
+Reference Operon Extraction Statistics for Manuscript
+============================================================
+
+1. Reference Genome Source:
+   Organism: .
+   Accession: urn.local...t-jgafwvs
+   Sequence length: 8,082 bp
+   GenBank features: 40 total
+     misc_feature: 31
+     variation: 9
+
+2. Operon Gene Content:
+   Operon: Fructoselysine/glucoselysine utilization operon
+   Coding genes: 7
+   Regulatory elements: 2
+   Biological pathway: Fructoselysine and glucoselysine utilization via PTS transport system
+
+   Gene composition:
+     frpC: fructoselysine-6-phosphate deglycase
+     glpC: glucoselysine-6-phosphate deglycase
+     ptsD: PTS system mannose/fructose/sorbose family IID component
+     ptsC: PTS system sorbose-specific IIC component
+     ptsB: PTS system sorbose subfamily IIB component
+     ptsA: PTS system fructose IIA component
+     fruR: sigma-54 dependent transcriptional regulator
+
+   Regulatory elements:
+     promoter: operon promoter region
+     pribnow_box: Pribnow box (-10 box)
+
+3. Generated Query Sequences:
+   operon_genes.tsv:
+     Description: Gene information table
+     Genes catalogued: 9
+   operon_genes_protein.fasta:
+     Description: Protein sequences
+     Sequences: 7
+     Average length: 352 residues/bp
+     Length range: 154-919
+     Total length: 2,461 residues/bp
+   operon_genes_nt.fasta:
+     Description: Nucleotide gene sequences
+     Sequences: 7
+     Average length: 1058 residues/bp
+     Length range: 465-2760
+     Total length: 7,404 residues/bp
+   operon_noncoding_nt.fasta:
+     Description: Non-coding sequences
+     Sequences: 2
+     Average length: 289 residues/bp
+     Length range: 8-570
+     Total length: 578 residues/bp
+
+============================================================
+MANUSCRIPT NUMBERS SUMMARY:
+============================================================
+Reference organism: .
+Operon genes extracted: 7
+Regulatory elements: 2
+Protein query sequences: 7
+Average protein length: 352 amino acids
+Nucleotide gene sequences: 7
+Average gene length: 1058 bp
+Regulatory sequences: 2
+Output formats: TSV table + 3 FASTA files (protein, nucleotide, regulatory)
