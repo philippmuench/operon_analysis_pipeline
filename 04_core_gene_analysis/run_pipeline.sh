@@ -17,7 +17,7 @@ THREADS=${SLURM_CPUS_PER_TASK:-90}
 PROKKA_DIR="../01_prokka_annotation/output/prokka_results"
 OUTPUT_DIR="output"
 THRESHOLD=0.95
-MAFFT_TIMEOUT=300
+MAFFT_TIMEOUT=0
 HELP=false
 
 usage() {
@@ -31,7 +31,7 @@ usage() {
     echo "  --output-dir DIR        Output directory (default: output)"
     echo "  --threshold FLOAT       Core gene prevalence threshold (default: 0.95)"
     echo "  --threads NUM           Number of threads (default: SLURM allocation or 90)"
-    echo "  --mafft-timeout SEC     MAFFT timeout per gene in seconds (default: 300, 0=none)"
+    echo "  --mafft-timeout SEC     MAFFT timeout per gene in seconds (default: 0=none)"
     echo "  --help                  Show this help message"
     echo ""
     echo "Pipeline steps:"

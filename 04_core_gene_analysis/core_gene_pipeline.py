@@ -309,7 +309,7 @@ def create_msa_for_gene(args):
     except Exception as e:
         return gene_name, f"Error: {str(e)}"
 
-def create_alignments(seq_dir, output_dir, threads=None, timeout=300):
+def create_alignments(seq_dir, output_dir, threads=None, timeout=0):
     """Create MSAs for all core genes."""
     
     print(f"\n{'='*60}")
@@ -634,8 +634,8 @@ Examples:
                        help='Start from specific step (1-5)')
     parser.add_argument('--mafft-timeout', 
                        type=int, 
-                       default=30000,
-                       help='Timeout for MAFFT per gene in seconds (default: 300, 0=no timeout)')
+                       default=0,
+                       help='Timeout for MAFFT per gene in seconds (default: 0=no timeout)')
     
     args = parser.parse_args()
     
