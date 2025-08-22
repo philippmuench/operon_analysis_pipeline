@@ -60,7 +60,8 @@ output/
 │   └── *_nucleotide_frequency_logo.png
 ├── noncoding_sequences/          # Extracted regulatory sequences
 ├── operon_conservation_metrics.csv  # Conservation statistics
-└── extraction_pipeline_summary.txt  # Comprehensive summary
+├── extraction_pipeline_summary.txt  # Comprehensive summary
+└── manuscript_numbers.txt        # Key statistics for manuscript
 
 # Optional gene boundary analysis
 output/gene_boundary_analysis/

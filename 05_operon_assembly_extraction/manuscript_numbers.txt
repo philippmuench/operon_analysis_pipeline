@@ -1,0 +1,82 @@
+Operon Assembly Extraction Statistics for Manuscript
+============================================================
+
+1. BLAST-based Sequence Extraction:
+   BLAST result files analyzed: 25,761
+   Unique genes with hits: 50
+   Total BLAST hits processed: 2,090
+   High-quality hits extracted: 336
+   Extraction success rate: 16.1%
+   Quality thresholds: ≥90% identity, ≥80% coverage
+   Mean sequence identity: 43.5%
+   Mean query coverage: 94.4%
+
+2. Sequence Extraction Results:
+   Extraction strategies employed: 1
+   Total genes successfully extracted: 7
+   Average sequences per gene: 8259
+   Median sequences per gene: 8260
+   Average sequence length: 1053 bp
+   Sequence length range: 87-2769 bp
+
+3. Multiple Sequence Alignment Generation:
+   MAFFT version: 7.490
+   Algorithm selection: automatic selection
+   Total alignments created: 8
+   Coding gene alignments: 7
+   Non-coding region alignments: 1
+   Average alignment length: 998 positions
+   Average sequences per alignment: 8300
+
+4. Conservation Analysis and Visualization:
+   Total conservation plots generated: 5
+   Gene conservation plots: 5
+   Promoter conservation plots: 0
+   Plot types generated: ptsB, ptsA, ptsD, ptsC, glpC
+
+5. Extraction Methods:
+   Coordinate Based:
+     - BLAST hit coordinates mapped to genome assemblies
+     - Identity threshold: ≥90%
+     - Coverage threshold: ≥80%
+   Prokka Based:
+     - Sequences extracted from Prokka annotations using BLAST mapping
+   Assembly Based:
+     - Direct extraction from raw genome assemblies
+
+6. ptsA Start Codon Pattern Analysis:
+   Total ptsA genes analyzed: 8260
+   Overall start codon usage:
+     - TTG: 87.3% (canonical for ptsA)
+     - ATG: 12.7%
+     - GTG: 0.0%
+
+   Laboratory-specific pattern:
+     - Laboratory strains (n=325):
+       ATG: 55.1%
+       TTG: 44.9%
+     - Other niches (n=7925):
+       ATG: 10.9%
+       TTG: 89.1%
+     - Statistical significance:
+       Odds ratio: 10.01
+       P-value: 4.4452e-79
+       Result: Highly significant (p < 0.001)
+
+============================================================
+MANUSCRIPT NUMBERS SUMMARY:
+============================================================
+BLAST hits processed: 2,090
+High-quality sequences extracted: 336
+Quality thresholds: ≥90% identity, ≥80% coverage
+Average sequences per gene: 8259
+Average sequence length: 1053 bp
+Multiple sequence alignments: 8
+MAFFT version 7.490 with automatic algorithm selection
+Conservation plots generated: 5
+
+ptsA LABORATORY ADAPTATION:
+ptsA normally uses TTG start codon (87.3%)
+Laboratory strains show ATG usage: 55.1%
+Other niches show ATG usage: 10.9%
+Statistical significance: p = 4.4452e-79
