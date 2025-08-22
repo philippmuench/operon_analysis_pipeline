@@ -728,39 +728,97 @@ def create_stratification_plots(output_dir: str) -> None:
         plt.close()
         print("  Saved: ptsA_start_codon_by_niche.png/pdf")
     
-    # 3. Country comparison
+    # 3. Country comparison - Enhanced visualizations
     country_file = os.path.join(output_dir, "start_codon_by_country.tsv")
     if Path(country_file).exists():
         print("Creating Country comparison plots...")
         country_df = pd.read_csv(country_file, sep='\t')
         
-        fig, ax = plt.subplots(figsize=(12, 6))
+        # Create figure with multiple subplots
+        fig = plt.figure(figsize=(16, 10))
         
-        # Sort by total samples
-        country_df = country_df.sort_values('Total', ascending=True)
-        y = range(len(country_df))
+        # 3a. Horizontal stacked bar chart (top left)
+        ax1 = plt.subplot(2, 2, 1)
+        country_df_sorted = country_df.sort_values('Total', ascending=True)
+        y = range(len(country_df_sorted))
         
-        # Horizontal stacked bar chart
-        ax.barh(y, country_df['ATG%'], label='ATG', color='#2E7D32')
-        ax.barh(y, country_df['GTG%'], left=country_df['ATG%'], label='GTG', color='#1976D2')
-        ax.barh(y, country_df['TTG%'], left=country_df['ATG%'] + country_df['GTG%'], label='TTG', color='#D32F2F')
+        ax1.barh(y, country_df_sorted['ATG%'], label='ATG', color='#2E7D32')
+        ax1.barh(y, country_df_sorted['GTG%'], left=country_df_sorted['ATG%'], label='GTG', color='#1976D2')
+        ax1.barh(y, country_df_sorted['TTG%'], left=country_df_sorted['ATG%'] + country_df_sorted['GTG%'], label='TTG', color='#D32F2F')
         
-        ax.set_yticks(y)
-        ax.set_yticklabels(country_df['Country'])
-        ax.set_xlabel('Start Codon Usage (%)', fontsize=12)
-        ax.set_title('Start Codon Distribution by Country', fontsize=14, fontweight='bold')
-        ax.legend(loc='lower right')
-        ax.set_xlim(0, 100)
+        ax1.set_yticks(y)
+        ax1.set_yticklabels(country_df_sorted['Country'])
+        ax1.set_xlabel('Start Codon Usage (%)', fontsize=10)
+        ax1.set_title('Start Codon Distribution by Country', fontsize=12, fontweight='bold')
+        ax1.legend(loc='lower right', fontsize=9)
+        ax1.set_xlim(0, 105)
         
         # Add sample sizes
-        for i, (idx, row) in enumerate(country_df.iterrows()):
-            ax.text(102, i, f"n={row['Total']}", va='center', fontsize=8)
+        for i, (idx, row) in enumerate(country_df_sorted.iterrows()):
+            ax1.text(101, i, f"{row['Total']}", va='center', fontsize=7, color='gray')
         
+        # 3b. TTG usage focus (top right)
+        ax2 = plt.subplot(2, 2, 2)
+        country_df_ttg = country_df.sort_values('TTG%', ascending=False)
+        x = range(len(country_df_ttg))
+        
+        colors = ['#D32F2F' if ttg > 15 else '#FFA726' if ttg > 10 else '#66BB6A' 
+                  for ttg in country_df_ttg['TTG%']]
+        
+        ax2.bar(x, country_df_ttg['TTG%'], color=colors, alpha=0.7)
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(country_df_ttg['Country'], rotation=45, ha='right')
+        ax2.set_ylabel('TTG Usage (%)', fontsize=10)
+        ax2.set_title('TTG Start Codon Usage by Country\n(Sorted by TTG frequency)', fontsize=12, fontweight='bold')
+        ax2.axhline(y=12.8, color='gray', linestyle='--', alpha=0.5, label='Overall avg (12.8%)')
+        ax2.legend(fontsize=9)
+        
+        # Add value labels on bars
+        for i, (idx, row) in enumerate(country_df_ttg.iterrows()):
+            ax2.text(i, row['TTG%'] + 0.5, f"{row['TTG%']:.1f}", ha='center', fontsize=7)
+        
+        # 3c. Sample size vs TTG usage scatter (bottom left)
+        ax3 = plt.subplot(2, 2, 3)
+        ax3.scatter(country_df['Total'], country_df['TTG%'], 
+                   s=100, alpha=0.6, c=country_df['TTG%'], cmap='RdYlGn_r')
+        
+        # Add country labels for interesting points
+        for idx, row in country_df.iterrows():
+            if row['TTG%'] > 15 or row['Total'] > 1000:
+                ax3.annotate(row['Country'], (row['Total'], row['TTG%']), 
+                           fontsize=7, alpha=0.7, ha='center')
+        
+        ax3.set_xlabel('Sample Size (n)', fontsize=10)
+        ax3.set_ylabel('TTG Usage (%)', fontsize=10)
+        ax3.set_title('Sample Size vs TTG Usage', fontsize=12, fontweight='bold')
+        ax3.axhline(y=12.8, color='gray', linestyle='--', alpha=0.5)
+        ax3.grid(True, alpha=0.3)
+        
+        # 3d. Grouped bar chart comparing ATG vs TTG (bottom right)
+        ax4 = plt.subplot(2, 2, 4)
+        country_df_top = country_df.nlargest(8, 'Total')  # Top 8 countries by sample size
+        x = np.arange(len(country_df_top))
+        width = 0.35
+        
+        ax4.bar(x - width/2, country_df_top['ATG%'], width, label='ATG', color='#2E7D32', alpha=0.8)
+        ax4.bar(x + width/2, country_df_top['TTG%'], width, label='TTG', color='#D32F2F', alpha=0.8)
+        
+        ax4.set_xticks(x)
+        ax4.set_xticklabels(country_df_top['Country'], rotation=45, ha='right')
+        ax4.set_ylabel('Usage (%)', fontsize=10)
+        ax4.set_title('ATG vs TTG Usage (Top 8 Countries by Sample Size)', fontsize=12, fontweight='bold')
+        ax4.legend(fontsize=9)
+        
+        # Add sample sizes below
+        for i, (idx, row) in enumerate(country_df_top.iterrows()):
+            ax4.text(i, -5, f"n={row['Total']}", ha='center', fontsize=7, color='gray')
+        
+        plt.suptitle('Start Codon Usage Analysis by Country', fontsize=14, fontweight='bold', y=1.02)
         plt.tight_layout()
-        plt.savefig(os.path.join(plots_dir, 'start_codon_by_country.png'), dpi=150, bbox_inches='tight')
-        plt.savefig(os.path.join(plots_dir, 'start_codon_by_country.pdf'), bbox_inches='tight')
+        plt.savefig(os.path.join(plots_dir, 'start_codon_by_country_detailed.png'), dpi=150, bbox_inches='tight')
+        plt.savefig(os.path.join(plots_dir, 'start_codon_by_country_detailed.pdf'), bbox_inches='tight')
         plt.close()
-        print("  Saved: start_codon_by_country.png/pdf")
+        print("  Saved: start_codon_by_country_detailed.png/pdf")
     
     # 4. Heatmap comparing all genes across source niches
     summary_file = os.path.join(output_dir, "start_site_summary.tsv")
