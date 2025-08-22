@@ -737,8 +737,11 @@ def create_stratification_plots(output_dir: str) -> None:
         summary_df = pd.read_csv(summary_file, sep='\t')
         metadata_df = pd.read_csv(metadata_file, sep='\t')
         
+        # Extract genome ID from file name to match with AS_barcode
+        summary_df['AS_barcode'] = summary_df['genome_id'].str.replace('.result', '', regex=False)
+        
         # Merge with metadata
-        merged_df = summary_df.merge(metadata_df, left_on='genome_id', right_on='Genome_ID', how='left')
+        merged_df = summary_df.merge(metadata_df, on='AS_barcode', how='left')
         
         # Get unique genes
         genes = merged_df['gene'].unique()
@@ -781,23 +784,30 @@ def create_stratification_plots(output_dir: str) -> None:
                 # Sort by total samples for better visualization
                 country_gene_df = country_gene_df.sort_values('Total', ascending=False).head(20)  # Top 20 countries
                 
-                # Subplot 1: Stacked bar chart
+                # Subplot 1: Stacked bar chart sorted by ATG% (highest first)
                 ax1 = plt.subplot(2, 2, 1)
-                x = range(len(country_gene_df))
-                ax1.bar(x, country_gene_df['ATG%'], label='ATG', color='#2E7D32', alpha=0.8)
-                ax1.bar(x, country_gene_df['GTG%'], bottom=country_gene_df['ATG%'], label='GTG', color='#1976D2', alpha=0.8)
-                ax1.bar(x, country_gene_df['TTG%'], bottom=country_gene_df['ATG%'] + country_gene_df['GTG%'], label='TTG', color='#D32F2F', alpha=0.8)
+                # Sort by ATG% descending to show highest ATG usage first
+                country_gene_df_sorted = country_gene_df.sort_values('ATG%', ascending=False).head(20)
+                x = range(len(country_gene_df_sorted))
+                
+                # Create stacked bars
+                ax1.bar(x, country_gene_df_sorted['ATG%'], label='ATG', color='#2E7D32', alpha=0.8)
+                ax1.bar(x, country_gene_df_sorted['GTG%'], bottom=country_gene_df_sorted['ATG%'], 
+                       label='GTG', color='#1976D2', alpha=0.8)
+                ax1.bar(x, country_gene_df_sorted['TTG%'], 
+                       bottom=country_gene_df_sorted['ATG%'] + country_gene_df_sorted['GTG%'], 
+                       label='TTG', color='#D32F2F', alpha=0.8)
                 
                 ax1.set_xticks(x)
-                ax1.set_xticklabels(country_gene_df['Country'], rotation=45, ha='right', fontsize=8)
+                ax1.set_xticklabels(country_gene_df_sorted['Country'], rotation=45, ha='right', fontsize=8)
                 ax1.set_ylabel('Start Codon Usage (%)')
-                ax1.set_title(f'{gene}: Start Codon Distribution by Country', fontsize=11, fontweight='bold')
+                ax1.set_title(f'{gene}: Start Codon Distribution (Sorted by ATG%)', fontsize=11, fontweight='bold')
                 ax1.legend(loc='upper right', fontsize=9)
-                ax1.set_ylim(0, 105)
+                ax1.set_ylim(0, 110)  # Extra space for sample size labels
                 
-                # Add sample sizes
-                for i, (idx, row) in enumerate(country_gene_df.iterrows()):
-                    ax1.text(i, 101, f"n={row['Total']}", ha='center', fontsize=6, color='gray')
+                # Add sample sizes on top of bars
+                for i, (idx, row) in enumerate(country_gene_df_sorted.iterrows()):
+                    ax1.text(i, 102, f"n={row['Total']}", ha='center', fontsize=6, color='gray', rotation=0)
                 
                 # Subplot 2: TTG usage focus
                 ax2 = plt.subplot(2, 2, 2)
@@ -877,25 +887,30 @@ def create_stratification_plots(output_dir: str) -> None:
         # Create figure with multiple subplots
         fig = plt.figure(figsize=(16, 10))
         
-        # 3a. Horizontal stacked bar chart (top left)
+        # 3a. Vertical stacked bar chart sorted by ATG% (top left)
         ax1 = plt.subplot(2, 2, 1)
-        country_df_sorted = country_df.sort_values('Total', ascending=True)
-        y = range(len(country_df_sorted))
+        # Sort by ATG% descending (highest ATG first)
+        country_df_sorted = country_df.sort_values('ATG%', ascending=False).head(20)  # Top 20 countries
+        x = range(len(country_df_sorted))
         
-        ax1.barh(y, country_df_sorted['ATG%'], label='ATG', color='#2E7D32')
-        ax1.barh(y, country_df_sorted['GTG%'], left=country_df_sorted['ATG%'], label='GTG', color='#1976D2')
-        ax1.barh(y, country_df_sorted['TTG%'], left=country_df_sorted['ATG%'] + country_df_sorted['GTG%'], label='TTG', color='#D32F2F')
+        # Create stacked bars
+        ax1.bar(x, country_df_sorted['ATG%'], label='ATG', color='#2E7D32', alpha=0.8)
+        ax1.bar(x, country_df_sorted['GTG%'], bottom=country_df_sorted['ATG%'], 
+               label='GTG', color='#1976D2', alpha=0.8)
+        ax1.bar(x, country_df_sorted['TTG%'], 
+               bottom=country_df_sorted['ATG%'] + country_df_sorted['GTG%'], 
+               label='TTG', color='#D32F2F', alpha=0.8)
         
-        ax1.set_yticks(y)
-        ax1.set_yticklabels(country_df_sorted['Country'])
-        ax1.set_xlabel('Start Codon Usage (%)', fontsize=10)
-        ax1.set_title('Start Codon Distribution by Country', fontsize=12, fontweight='bold')
-        ax1.legend(loc='lower right', fontsize=9)
-        ax1.set_xlim(0, 105)
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(country_df_sorted['Country'], rotation=45, ha='right', fontsize=8)
+        ax1.set_ylabel('Start Codon Usage (%)', fontsize=10)
+        ax1.set_title('Start Codon Distribution (Sorted by ATG%)', fontsize=12, fontweight='bold')
+        ax1.legend(loc='upper right', fontsize=9)
+        ax1.set_ylim(0, 110)  # Extra space for sample size labels
         
-        # Add sample sizes
+        # Add sample sizes on top of bars
         for i, (idx, row) in enumerate(country_df_sorted.iterrows()):
-            ax1.text(101, i, f"{row['Total']}", va='center', fontsize=7, color='gray')
+            ax1.text(i, 102, f"n={row['Total']}", ha='center', fontsize=6, color='gray', rotation=0)
         
         # 3b. TTG usage focus (top right)
         ax2 = plt.subplot(2, 2, 2)
