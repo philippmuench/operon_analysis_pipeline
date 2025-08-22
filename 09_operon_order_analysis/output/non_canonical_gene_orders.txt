@@ -1,0 +1,123 @@
+Non-canonical Operon Gene Orders
+============================================================
+
+Total complete operons: 8260
+Canonical order: 8241
+Non-canonical order: 19
+
+Detailed non-canonical orders:
+----------------------------------------
+
+Genome: ENT_AA0068AA_AS
+Gene order: glpC -> frpC -> fruR -> ptsA -> ptsB -> ptsC -> ptsD
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_AA1983AA_AS
+Gene order: ptsC -> ptsD -> glpC -> frpC -> ptsB -> ptsA -> fruR
+Same contig: False
+Same strand: False
+Synteny score: 0.50
+
+Genome: ENT_AA2043AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_AA2183AA_AS
+Gene order: ptsC -> ptsD -> glpC -> frpC -> ptsB -> ptsA -> fruR
+Same contig: False
+Same strand: False
+Synteny score: 0.50
+
+Genome: ENT_AA2184AA_AS
+Gene order: fruR -> ptsA -> ptsB -> ptsC -> frpC -> glpC -> ptsD
+Same contig: False
+Same strand: False
+Synteny score: 0.67
+
+Genome: ENT_AA2279AA_AS
+Gene order: frpC -> glpC -> ptsD -> ptsC -> fruR -> ptsA -> ptsB
+Same contig: False
+Same strand: False
+Synteny score: 0.67
+
+Genome: ENT_BA1039AA_AS
+Gene order: glpC -> frpC -> fruR -> ptsA -> ptsB -> ptsC -> ptsD
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_BA1400AA_AS
+Gene order: fruR -> frpC -> glpC -> ptsD -> ptsC -> ptsB -> ptsA
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_BA1538AA_AS
+Gene order: glpC -> frpC -> fruR -> ptsA -> ptsB -> ptsC -> ptsD
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_BA7816AA_AS
+Gene order: ptsB -> ptsA -> fruR -> frpC -> glpC -> ptsD -> ptsC
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_CA3576AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: False
+Synteny score: 0.83
+
+Genome: ENT_CA3583AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_CA3588AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_CA3589AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_CA3593AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_CA3603AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: True
+Synteny score: 0.83
+
+Genome: ENT_CA3606AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: False
+Synteny score: 0.83
+
+Genome: ENT_CA3607AA_AS
+Gene order: ptsA -> ptsB -> ptsC -> ptsD -> glpC -> frpC -> fruR
+Same contig: False
+Same strand: False
+Synteny score: 0.83
+
+Genome: ENT_DA3037AA_AS
+Gene order: ptsD -> ptsC -> ptsB -> ptsA -> fruR -> frpC -> glpC
+Same contig: False
+Same strand: True
+Synteny score: 0.83

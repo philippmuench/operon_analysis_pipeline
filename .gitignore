@@ -18,6 +18,14 @@
 !*/output/*summary*.txt
 !*/plots/*.png
 
+# Allow step 09 key outputs
+!09_operon_order_analysis/output/gene_cooccurrence_matrix.csv
+!09_operon_order_analysis/output/gene_order_visualization.pdf
+!09_operon_order_analysis/output/manuscript_stats.txt
+!09_operon_order_analysis/output/non_canonical_gene_orders.txt
+!09_operon_order_analysis/output/operon_order_summary.txt
+!09_operon_order_analysis/output/operon_organization_types.png
+
 # Allow manuscript and documentation
 !manuscript.md
 !README.md

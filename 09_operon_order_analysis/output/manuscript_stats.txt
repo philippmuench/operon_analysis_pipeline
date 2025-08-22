@@ -1,0 +1,44 @@
+============================================================
+OPERON ORDER ANALYSIS - MANUSCRIPT STATISTICS
+============================================================
+
+Dataset Overview:
+  Total genomes analyzed: 8,587
+
+Operon Completeness:
+  Complete operons (all 7 genes): 8,260 (96.2%)
+  Genomes by gene count:
+    7 genes: 8,260 (96.2%)
+    4 genes: 1 (0.0%)
+    0 genes: 326 (3.8%)
+
+Individual Gene Presence:
+  frpC: 8,261 genomes (96.2%)
+  glpC: 8,261 genomes (96.2%)
+  ptsD: 8,261 genomes (96.2%)
+  ptsC: 8,260 genomes (96.2%)
+  ptsB: 8,260 genomes (96.2%)
+  ptsA: 8,260 genomes (96.2%)
+  fruR: 8,261 genomes (96.2%)
+
+Synteny Conservation (for complete operons):
+  Canonical gene order: 8,241 (99.8%)
+  All genes on same contig: 8,223 (99.6%)
+  All genes on same strand: 8,247 (99.8%)
+  Mean synteny score: 0.999
+
+Operon Organization Types:
+  Complete and conserved: 8,223 (95.8%)
+  No genes: 326 (3.8%)
+  Complete but fragmented: 37 (0.4%)
+  Partial: 1 (0.0%)
+
+Inter-gene Distance Statistics:
+  Mean distance: 19 bp
+  Median distance: 13 bp
+  Min distance: 1 bp
+  Max distance: 53894 bp
+
+Structural Variations:
+  Operons with inversions: 0 (0.0%)
+  Operons with rearrangements: 0 (0.0%)
