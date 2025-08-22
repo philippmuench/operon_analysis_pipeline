@@ -1,0 +1,76 @@
+============================================================
+START CODON USAGE STRATIFIED BY METADATA
+============================================================
+
+BY SOURCE NICHE:
+----------------------------------------
+  Animal Feed: n=57
+    ATG: 49 (86.0%)
+    GTG: 1 (1.8%)
+    TTG: 7 (12.3%)
+  Aquatic Animal: n=939
+    ATG: 819 (87.2%)
+    GTG: 0 (0.0%)
+    TTG: 120 (12.8%)
+  Companion Animal: n=365
+    ATG: 319 (87.4%)
+    GTG: 1 (0.3%)
+    TTG: 45 (12.3%)
+  Environment: n=3688
+    ATG: 3257 (88.3%)
+    GTG: 0 (0.0%)
+    TTG: 431 (11.7%)
+  Food: n=173
+    ATG: 152 (87.9%)
+    GTG: 0 (0.0%)
+    TTG: 21 (12.1%)
+  Human: n=28121
+    ATG: 24405 (86.8%)
+    GTG: 10 (0.0%)
+    TTG: 3706 (13.2%)
+  Laboratory: n=2795
+    ATG: 2566 (91.8%)
+    GTG: 1 (0.0%)
+    TTG: 228 (8.2%)
+  Livestock: n=10807
+    ATG: 9437 (87.3%)
+    GTG: 4 (0.0%)
+    TTG: 1366 (12.6%)
+  Poultry: n=7682
+    ATG: 6682 (87.0%)
+    GTG: 3 (0.0%)
+    TTG: 997 (13.0%)
+  Wild Animal: n=822
+    ATG: 710 (86.4%)
+    GTG: 0 (0.0%)
+    TTG: 112 (13.6%)
+  Wild animal: n=871
+    ATG: 757 (86.9%)
+    GTG: 0 (0.0%)
+    TTG: 114 (13.1%)
+
+ptsA START CODON USAGE BY SOURCE NICHE:
+----------------------------------------
+  Animal Feed: 87.5% TTG (n=8)
+  Aquatic Animal: 88.8% TTG (n=134)
+  Companion Animal: 86.5% TTG (n=52)
+  Environment: 81.2% TTG (n=526)
+  Food: 83.3% TTG (n=24)
+  Human: 90.5% TTG (n=3999)
+  Laboratory: 56.9% TTG (n=399)
+  Livestock: 88.1% TTG (n=1540)
+  Poultry: 89.4% TTG (n=1093)
+  Wild Animal: 93.2% TTG (n=117)
+  Wild animal: 90.3% TTG (n=124)
+
+BY COUNTRY (Top 10):
+----------------------------------------
+  United States: n=25888, ATG=87.0%, TTG=12.9%
+  Spain: n=6049, ATG=87.1%, TTG=12.9%
+  United Kingdom: n=3992, ATG=86.5%, TTG=13.5%
+  Portugal: n=3618, ATG=88.1%, TTG=11.9%
+  Canada: n=2939, ATG=86.9%, TTG=13.1%
+  Netherlands: n=2207, ATG=87.0%, TTG=13.0%
+  Singapore: n=1401, ATG=94.7%, TTG=5.2%
+  Denmark: n=1045, ATG=87.1%, TTG=12.9%
+  Australia: n=814, ATG=86.7%, TTG=13.3%

@@ -111,7 +111,7 @@ Located in `output/`:
 - **RBS spacing**: Distance between RBS and start codon
   - Mean: 30 nt, Median: 24 nt
   - Optimal: 5-9 nt, Acceptable: 4-13 nt
-- **Laboratory adaptation** (NEW):
+- **Laboratory adaptation**
   - Laboratory strains: 55.1% ATG usage in ptsA
   - Other niches: 10.9% ATG usage in ptsA
   - Odds ratio: 10.0 (p < 0.001, Fisher's exact test)

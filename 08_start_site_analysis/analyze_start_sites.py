@@ -200,21 +200,23 @@ def find_rbs(seq_upstream: str, rbs_min_spacer: int, rbs_max_spacer: int) -> Tup
     best_mismatches: Optional[int] = None
     # Position 0 is immediately upstream base of start; positions increase upstream
     # We need to search a region (rbs_min_spacer + motif_len) .. (rbs_max_spacer + motif_len)
-    window_len = max(rbs_max_spacer + 6, len(seq_upstream))
+    max_mlen = max(len(m) for m in RBS_MOTIFS)
+    window_len = max(rbs_max_spacer + max_mlen, len(seq_upstream))
     region = seq_upstream[:window_len]
     for spacer in range(rbs_min_spacer, rbs_max_spacer + 1):
         for motif in RBS_MOTIFS:
-            mlen = len(motif)
-            start_idx = spacer + mlen  # index upstream from start where motif ends
-            # Motif spans [spacer .. spacer+mlen-1] upstream; 0-based in region slice
-            # So in forward string where index 0 is immediately upstream, motif slice is region[spacer:spacer+mlen]
-            if spacer + mlen <= len(region):
-                window = region[spacer : spacer + mlen]
-                mism = count_mismatches(window, motif)
-                if mism <= 1:
-                    if best_mismatches is None or mism < best_mismatches:
-                        best = (window, spacer, mism)
-                        best_mismatches = mism
+            # Check both forward motif and its reverse (since upstream seq is reversed)
+            for patt in (motif, motif[::-1]):
+                mlen = len(patt)
+                # Motif spans [spacer .. spacer+mlen-1] upstream; 0-based in region slice
+                # So in forward string where index 0 is immediately upstream, motif slice is region[spacer:spacer+mlen]
+                if spacer + mlen <= len(region):
+                    window = region[spacer : spacer + mlen]
+                    mism = count_mismatches(window, patt)
+                    if mism <= 1:
+                        if best_mismatches is None or mism < best_mismatches:
+                            best = (window, spacer, mism)
+                            best_mismatches = mism
     return best
 
 
@@ -490,8 +492,8 @@ def stratify_by_metadata(tsv_path: str, metadata_path: str, output_dir: str) -> 
     # Load the TSV results
     results_df = pd.read_csv(tsv_path, sep='\t')
     
-    # Extract barcode from genome_id
-    results_df['barcode'] = results_df['genome_id'].str.replace('_AS.result', '').str.replace('.result', '')
+    # Extract barcode from genome_id by removing .result and _AS suffixes independently
+    results_df['barcode'] = results_df['genome_id'].str.replace('.result', '').str.replace('_AS', '')
     
     # Load metadata
     meta_df = pd.read_csv(metadata_path, sep='\t')
@@ -987,7 +989,7 @@ def create_stratification_plots(output_dir: str) -> None:
         
         # Load and merge data
         summary_df = pd.read_csv(summary_file, sep='\t')
-        summary_df['barcode'] = summary_df['genome_id'].str.replace('_AS.result', '').str.replace('.result', '')
+        summary_df['barcode'] = summary_df['genome_id'].str.replace('.result', '').str.replace('_AS', '')
         
         meta_df = pd.read_csv(metadata_file, sep='\t')
         meta_mapping = {}
