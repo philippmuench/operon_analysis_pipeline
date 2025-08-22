@@ -20,17 +20,56 @@ from Bio.Data import CodonTable
 from collections import defaultdict, Counter
 from multiprocessing import Pool, cpu_count
 from scipy import stats
+from math import log
+from itertools import combinations
+from functools import lru_cache
 import warnings
 warnings.filterwarnings('ignore')
+
+# Static cached function for syn_fraction_by_pos
+@lru_cache(maxsize=4096)
+def _syn_fraction_by_pos_cached_static(codon, table_id=11):
+    """Static cached version of syn_fraction_by_pos."""
+    NUCS = "ATCG"
+    try:
+        aa0 = str(Seq(codon).translate(table=table_id))
+    except:
+        return None
+        
+    if aa0 == "*" or any(n not in NUCS for n in codon):  # skip stops/ambiguous
+        return None
+    
+    fracs = []
+    for pos in range(3):
+        syn = 0
+        tot = 0
+        for n in NUCS:
+            if n == codon[pos]:
+                continue
+            mutated = codon[:pos] + n + codon[pos+1:]
+            if any(x not in NUCS for x in mutated):
+                continue
+            try:
+                aa = str(Seq(mutated).translate(table=table_id))
+            except:
+                continue
+            if aa == "*":
+                continue  # exclude paths through stop
+            tot += 1
+            if aa == aa0:
+                syn += 1
+        fracs.append(syn / tot if tot else 0.0)
+    return tuple(fracs)
 
 class DNdSAnalyzer:
     """Main class for dN/dS analysis pipeline."""
     
-    def __init__(self, operon_dir, core_dir, output_dir, threads=1):
+    def __init__(self, operon_dir, core_dir, output_dir, threads=1, include_simple=False):
         self.operon_dir = Path(operon_dir) if operon_dir else None
         self.core_dir = Path(core_dir) if core_dir else None
         self.output_dir = Path(output_dir)
         self.threads = threads
+        self.include_simple = include_simple
         self.genetic_code = CodonTable.unambiguous_dna_by_id[11]
         
         # Create output directory structure
@@ -54,8 +93,8 @@ class DNdSAnalyzer:
         )
         self.logger = logging.getLogger(__name__)
         
-    def classify_substitution(self, codon1, codon2):
-        """Classify a codon substitution as synonymous or non-synonymous."""
+    def classify_substitution_simple(self, codon1, codon2):
+        """Simple classification of codon substitution (original method for comparison)."""
         if codon1 == codon2:
             return 'identical', 0
             
@@ -79,6 +118,212 @@ class DNdSAnalyzer:
                 return 'non-synonymous', n_diffs
         except:
             return 'invalid', 0
+    
+    def syn_fraction_by_pos_cached(self, codon, table_id=11):
+        """Cached version of syn_fraction_by_pos."""
+        return _syn_fraction_by_pos_cached_static(codon, table_id)
+    
+    def syn_fraction_by_pos(self, codon, table_id=11):
+        """For each position (0..2) return fraction of single-nuc changes that are synonymous."""
+        NUCS = "ATCG"
+        try:
+            aa0 = str(Seq(codon).translate(table=table_id))
+        except:
+            return None
+            
+        if aa0 == "*" or any(n not in NUCS for n in codon):  # skip stops/ambiguous
+            return None
+        
+        fracs = []
+        for pos in range(3):
+            syn = 0
+            tot = 0
+            for n in NUCS:
+                if n == codon[pos]:
+                    continue
+                mutated = codon[:pos] + n + codon[pos+1:]
+                if any(x not in NUCS for x in mutated):
+                    continue
+                try:
+                    aa = str(Seq(mutated).translate(table=table_id))
+                except:
+                    continue
+                if aa == "*":
+                    continue  # exclude paths through stop
+                tot += 1
+                if aa == aa0:
+                    syn += 1
+            fracs.append(syn / tot if tot else 0.0)
+        return fracs
+    
+    def pairwise_dn_ds_ng86(self, codons_A, codons_B, table_id=11):
+        """NG86-style dN/dS calculation between two sequences' codon strings.
+        
+        Implements proper site normalization and JC correction.
+        """
+        NUCS = "ATCG"
+        S_sites = N_sites = 0.0
+        syn_diffs = nonsyn_diffs = 0.0
+
+        for c1, c2 in zip(codons_A, codons_B):
+            if "-" in c1 or "-" in c2 or len(c1) != 3 or len(c2) != 3:
+                continue
+            if any(n not in NUCS for n in c1 + c2):
+                continue
+            
+            # Let the cached function handle stop codons and ambiguous bases
+            f1 = self.syn_fraction_by_pos_cached(c1, table_id)
+            f2 = self.syn_fraction_by_pos_cached(c2, table_id)
+            if f1 is None or f2 is None:
+                continue  # covers stops/ambigs
+            
+            # Average site opportunities across the two codons
+            for p in range(3):
+                fS = 0.5 * (f1[p] + f2[p])
+                S_sites += fS
+                N_sites += (1.0 - fS)
+
+            # Distribute observed diffs across S/N using those fractions
+            for p in range(3):
+                if c1[p] != c2[p]:
+                    fS = 0.5 * (f1[p] + f2[p])
+                    syn_diffs += fS
+                    nonsyn_diffs += (1.0 - fS)
+
+        # Convert to proportions
+        pS = syn_diffs / S_sites if S_sites > 0 else float("nan")
+        pN = nonsyn_diffs / N_sites if N_sites > 0 else float("nan")
+
+        # JC correction (Nei–Gojobori)
+        def jc_correction(p):
+            if p is None or p != p or p >= 0.75:
+                return float("inf") if p >= 0.75 else float("nan")
+            return -0.75 * log(1 - (4.0/3.0) * p)
+
+        dS = jc_correction(pS)
+        dN = jc_correction(pN)
+        omega = dN / dS if (dS > 0 and dS != float("inf") and not (dS != dS)) else float("nan")
+        
+        return dN, dS, omega, S_sites, N_sites, syn_diffs, nonsyn_diffs
+    
+    def reference_based_dn_ds(self, alignment, gene_name=None, table_id=11):
+        """Calculate dN/dS using reference-based approach for large alignments.
+        
+        Uses actual reference sequence from step 02 when available.
+        Much faster for alignments with many sequences.
+        """
+        from collections import Counter
+        
+        # Try to load reference sequence
+        ref_file = Path("../02_reference_operon_extraction/output/operon_genes_nt.fasta")
+        reference_seq = None
+        
+        if gene_name and ref_file.exists():
+            try:
+                for record in SeqIO.parse(ref_file, "fasta"):
+                    # Parse header: >operon_CDS_1|frpC|fructoselysine-6-phosphate_deglycase
+                    parts = record.id.split('|')
+                    if len(parts) >= 2 and parts[1] == gene_name:
+                        reference_seq = str(record.seq).upper()
+                        self.logger.info(f"Using reference sequence for {gene_name}")
+                        break
+            except Exception as e:
+                self.logger.warning(f"Could not load reference: {e}")
+        
+        # Build consensus per codon position to preserve frame
+        seq_len = alignment.get_alignment_length()
+        ref_codons = []
+        
+        if reference_seq:
+            # Use provided reference
+            ref_codons = [reference_seq[i:i+3] for i in range(0, len(reference_seq)-2, 3)]
+        else:
+            # Build consensus codon-wise from alignment positions
+            for i in range(0, seq_len, 3):
+                if i+2 >= seq_len:
+                    break
+                # Get columns for this codon
+                cols = [alignment[:, i+k] for k in range(3)]
+                # Majority vote per position
+                codon = ''
+                for col in cols:
+                    # Count bases excluding gaps
+                    bases = [b for b in col if b in 'ACGT']
+                    if bases:
+                        # Use most common non-gap base
+                        codon += Counter(bases).most_common(1)[0][0]
+                    else:
+                        # If no valid bases, mark as N
+                        codon += 'N'
+                ref_codons.append(codon)
+            self.logger.info(f"Using consensus sequence as reference for {gene_name or 'unknown'}")
+        
+        # Precompute per-position synonymous fractions for reference
+        fS_by_pos = []
+        for rc in ref_codons:
+            if len(rc) != 3 or '-' in rc or 'N' in rc:
+                fS_by_pos.append(None)
+                continue
+            fr = self.syn_fraction_by_pos_cached(rc, table_id)
+            fS_by_pos.append(fr)
+        
+        # Calculate sites and differences
+        total_S_sites = 0.0
+        total_N_sites = 0.0
+        syn_diffs_total = 0.0
+        nonsyn_diffs_total = 0.0
+        n_seqs = 0
+        
+        for record in alignment:
+            s = str(record.seq).upper()
+            # Extract codons from the same positions as reference
+            seq_codons = [s[i:i+3] for i in range(0, seq_len, 3) if i+2 < seq_len]
+            n_seqs += 1
+            
+            for rc, sc, fr in zip(ref_codons, seq_codons, fS_by_pos):
+                if fr is None:
+                    continue
+                # Only skip if BOTH reference and sequence have invalid codons
+                if len(rc) != 3 or len(sc) != 3:
+                    continue
+                # Skip if either has N or if both have gaps
+                if 'N' in rc or 'N' in sc:
+                    continue
+                if '-' in rc and '-' in sc:
+                    continue
+                # Allow comparison if only one has gaps (treat as difference)
+                if '-' in rc or '-' in sc:
+                    # Can't properly calculate syn/nonsyn for gap comparisons
+                    continue
+                    
+                # Add site opportunities (only once per sequence)
+                for p in range(3):
+                    total_S_sites += fr[p]
+                    total_N_sites += (1.0 - fr[p])
+                    
+                    # If position differs, add fractional diffs
+                    if rc[p] != sc[p]:
+                        syn_diffs_total += fr[p]
+                        nonsyn_diffs_total += (1.0 - fr[p])
+        
+        # Calculate proportions
+        pS = syn_diffs_total / total_S_sites if total_S_sites > 0 else float('nan')
+        pN = nonsyn_diffs_total / total_N_sites if total_N_sites > 0 else float('nan')
+        
+        # Apply Jukes-Cantor correction
+        def jc_correction(p):
+            if p <= 0:
+                return 0.0
+            if p >= 0.749999:
+                return float('inf')
+            return -0.75 * log(1 - 4.0*p/3.0)
+        
+        dS = jc_correction(pS)
+        dN = jc_correction(pN)
+        
+        omega = dN / dS if (np.isfinite(dS) and dS > 0) else (float('inf') if dN > 0 else float('nan'))
+        
+        return dN, dS, omega, total_S_sites, total_N_sites, syn_diffs_total, nonsyn_diffs_total
             
     def analyze_alignment(self, alignment_file):
         """Analyze a single alignment for dN/dS and SNP types."""
@@ -90,44 +335,181 @@ class DNdSAnalyzer:
             if n_seqs < 2:
                 return None
                 
+            # Extract gene name from filename
+            gene_name = os.path.basename(alignment_file).replace('_aligned.fasta', '').replace('.fasta', '')
+            
             # Initialize counters
             stats = {
                 'file': os.path.basename(alignment_file),
+                'gene': gene_name,
                 'n_sequences': n_seqs,
                 'alignment_length': seq_length,
-                'synonymous': 0,
-                'non_synonymous': 0,
-                'total_codons': 0,
                 'variable_sites': 0,
                 'parsimony_informative': 0,
                 'singleton_sites': 0,
                 'gap_percentage': 0
             }
             
-            # Analyze codons
-            for pos in range(0, seq_length - 2, 3):
-                codons = [str(seq[pos:pos+3].seq).upper() for seq in alignment]
-                codons = [c for c in codons if '-' not in c and len(c) == 3]
+            # Simple method (optional)
+            if self.include_simple:
+                stats['synonymous'] = 0
+                stats['non_synonymous'] = 0
+                stats['total_codons'] = 0
                 
-                if len(codons) < 2:
-                    continue
+                # Analyze codons
+                for pos in range(0, seq_length - 2, 3):
+                    codons = [str(seq[pos:pos+3].seq).upper() for seq in alignment]
+                    codons = [c for c in codons if '-' not in c and len(c) == 3]
                     
-                stats['total_codons'] += len(codons)
+                    if len(codons) < 2:
+                        continue
+                        
+                    stats['total_codons'] += len(codons)
+                    
+                    # Pairwise comparisons (simple method)
+                    for i in range(len(codons)-1):
+                        for j in range(i+1, len(codons)):
+                            change_type, _ = self.classify_substitution_simple(codons[i], codons[j])
+                            if change_type == 'synonymous':
+                                stats['synonymous'] += 1
+                            elif change_type == 'non-synonymous':
+                                stats['non_synonymous'] += 1
+                                
+                # Calculate simple dN/dS (no site normalization)
+                if stats['synonymous'] > 0:
+                    stats['simple_dn_ds'] = stats['non_synonymous'] / stats['synonymous']
+                else:
+                    stats['simple_dn_ds'] = np.nan if stats['non_synonymous'] == 0 else np.inf
+            
+            # Method 2: NG86 with proper site normalization and JC correction
+            # Build codon strings for each sequence
+            seq_codons = []
+            total_valid_codons = 0
+            for record in alignment:
+                s = str(record.seq).upper()
+                # Skip sequences not divisible by 3 or with too many gaps
+                if len(s) % 3 == 0:
+                    codons = [s[i:i+3] for i in range(0, len(s), 3) if i+3 <= len(s)]
+                    valid_codons = [c for c in codons if '-' not in c and 'N' not in c and len(c) == 3]
+                    total_valid_codons += len(valid_codons)
+                    seq_codons.append(codons)
+            
+            # Add total valid codons count
+            stats['ng86_total_codons'] = total_valid_codons
+            
+            
+            # For large alignments (>100 sequences), use reference-based approach
+            if n_seqs > 100:
+                self.logger.info(f"Using reference-based approach for {gene_name} ({n_seqs} sequences)")
+                dN, dS, omega, S_sites, N_sites, syn_diffs, nonsyn_diffs = self.reference_based_dn_ds(
+                    alignment, gene_name
+                )
                 
-                # Pairwise comparisons
-                for i in range(len(codons)-1):
-                    for j in range(i+1, len(codons)):
-                        change_type, _ = self.classify_substitution(codons[i], codons[j])
-                        if change_type == 'synonymous':
-                            stats['synonymous'] += 1
-                        elif change_type == 'non-synonymous':
-                            stats['non_synonymous'] += 1
-                            
-            # Calculate dN/dS
-            if stats['synonymous'] > 0:
-                stats['dn_ds_ratio'] = stats['non_synonymous'] / stats['synonymous']
+                # Calculate total valid codons for reference-based approach
+                # S_sites + N_sites already represents the sum across all sequences
+                # Divide by 3 to convert from nucleotide sites to codons
+                total_codons_ref = (S_sites + N_sites) / 3.0
+                
+                # Add NG86 statistics from reference-based calculation
+                stats['ng86_total_codons'] = int(round(total_codons_ref))
+                stats['ng86_dn_ds'] = omega
+                stats['ng86_mean_dn_ds'] = omega
+                stats['ng86_mean_dN'] = dN
+                stats['ng86_mean_dS'] = dS
+                stats['ng86_S_sites'] = S_sites
+                stats['ng86_N_sites'] = N_sites
+                stats['ng86_syn_diffs'] = syn_diffs
+                stats['ng86_nonsyn_diffs'] = nonsyn_diffs
+                stats['ng86_n_pairs'] = n_seqs  # Number of comparisons to reference
+                stats['ng86_method'] = 'reference_based'
             else:
-                stats['dn_ds_ratio'] = np.nan if stats['non_synonymous'] == 0 else np.inf
+                # For small alignments, use pairwise comparisons
+                self.logger.info(f"Using pairwise approach for {gene_name} ({n_seqs} sequences)")
+                
+                # Aggregate rates instead of collecting individual omegas
+                sum_dN = 0.0
+                sum_dS = 0.0
+                sum_S_sites = 0.0
+                sum_N_sites = 0.0
+                pairs_used = 0
+                
+                if len(seq_codons) >= 2:
+                    for i, j in combinations(range(len(seq_codons)), 2):
+                        dN, dS, omega, S_sites, N_sites, syn_diffs, nonsyn_diffs = self.pairwise_dn_ds_ng86(
+                            seq_codons[i], seq_codons[j]
+                        )
+                        
+                        # Aggregate the rates
+                        if np.isfinite(dN):
+                            sum_dN += dN
+                        if np.isfinite(dS):
+                            sum_dS += dS
+                        if np.isfinite(S_sites):
+                            sum_S_sites += S_sites
+                        if np.isfinite(N_sites):
+                            sum_N_sites += N_sites
+                        if np.isfinite(dN) or np.isfinite(dS):
+                            pairs_used += 1
+                
+                # Calculate aggregated statistics
+                if sum_dS > 0:
+                    stats['ng86_dn_ds'] = sum_dN / sum_dS
+                elif sum_dN > 0:
+                    stats['ng86_dn_ds'] = float('inf')
+                else:
+                    stats['ng86_dn_ds'] = np.nan
+                    
+                stats['ng86_mean_dn_ds'] = stats['ng86_dn_ds']  # For compatibility
+                stats['ng86_mean_dN'] = sum_dN / max(1, pairs_used)
+                stats['ng86_mean_dS'] = sum_dS / max(1, pairs_used)
+                stats['ng86_S_sites'] = sum_S_sites / max(1, pairs_used)
+                stats['ng86_N_sites'] = sum_N_sites / max(1, pairs_used)
+                stats['ng86_n_pairs'] = pairs_used
+                stats['ng86_method'] = 'pairwise'
+            
+            # Keep dn_ds_ratio for backward compatibility, but use NG86 value
+            stats['dn_ds_ratio'] = stats['ng86_dn_ds']
+            
+            # --- Codon-level SNP-type counts (site-based, simple & readable) ---
+            codon_variable_sites = 0
+            codon_syn_sites = 0
+            codon_nonsyn_sites = 0
+
+            for pos in range(0, seq_length - 2, 3):
+                observed = []
+                for rec in alignment:
+                    c = str(rec.seq[pos:pos+3]).upper()
+                    if len(c) != 3 or '-' in c or 'N' in c:
+                        continue
+                    try:
+                        aa = str(Seq(c).translate(table=11))
+                    except Exception:
+                        continue
+                    if aa == '*':  # skip alleles translating to stop
+                        continue
+                    observed.append((c, aa))
+
+                # need at least 2 valid codons to be variable
+                if len(observed) < 2:
+                    continue
+
+                codon_set = {c for c, _ in observed}
+                if len(codon_set) < 2:
+                    continue  # not variable at codon level
+
+                aa_set = {aa for _, aa in observed}
+                codon_variable_sites += 1
+                if len(aa_set) == 1:
+                    codon_syn_sites += 1
+                else:
+                    codon_nonsyn_sites += 1
+
+            stats['codon_variable_sites'] = codon_variable_sites
+            stats['codon_syn_sites'] = codon_syn_sites
+            stats['codon_nonsyn_sites'] = codon_nonsyn_sites
+            stats['codon_syn_fraction'] = (codon_syn_sites / codon_variable_sites
+                                           if codon_variable_sites > 0 else np.nan)
+            # --- end codon-level SNP counts ---
                 
             # Calculate site statistics
             for pos in range(seq_length):
@@ -177,16 +559,93 @@ class DNdSAnalyzer:
         
         return pd.DataFrame(results) if results else pd.DataFrame()
         
+    def create_method_comparison_plot(self, df):
+        """Create plot comparing simple vs NG86 methods."""
+        # Only create comparison if simple method was computed
+        if 'simple_dn_ds' not in df.columns or df['simple_dn_ds'].isna().all():
+            self.logger.info("Skipping method comparison plot (simple method not computed)")
+            return
+        
+        if 'ng86_dn_ds' not in df.columns:
+            return
+        
+        fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+        fig.suptitle('Comparison of dN/dS Methods', fontsize=14, fontweight='bold')
+        
+        # Filter finite values
+        simple_vals = df['simple_dn_ds'].replace([np.inf, -np.inf], np.nan).dropna()
+        ng86_vals = df['ng86_dn_ds'].replace([np.inf, -np.inf], np.nan).dropna()
+        
+        # Scatter plot comparing methods
+        ax1 = axes[0]
+        merged = df[['gene', 'simple_dn_ds', 'ng86_dn_ds']].dropna()
+        merged = merged[np.isfinite(merged['simple_dn_ds']) & np.isfinite(merged['ng86_dn_ds'])]
+        if not merged.empty:
+            ax1.scatter(merged['simple_dn_ds'], merged['ng86_dn_ds'], alpha=0.6)
+            ax1.plot([0, 2], [0, 2], 'r--', alpha=0.5, label='y=x')
+            ax1.set_xlabel('Simple dN/dS (no normalization)')
+            ax1.set_ylabel('NG86 dN/dS (site-normalized + JC)')
+            ax1.set_title('Method Comparison')
+            ax1.legend()
+            ax1.grid(True, alpha=0.3)
+            
+            # Add gene labels for outliers
+            for _, row in merged.iterrows():
+                if abs(row['simple_dn_ds'] - row['ng86_dn_ds']) > 0.5:
+                    ax1.annotate(row['gene'], (row['simple_dn_ds'], row['ng86_dn_ds']), 
+                               fontsize=8, alpha=0.7)
+        
+        # Distribution comparison
+        ax2 = axes[1]
+        ax2.hist(simple_vals, bins=20, alpha=0.5, label='Simple method', color='blue')
+        ax2.hist(ng86_vals, bins=20, alpha=0.5, label='NG86 method', color='red')
+        ax2.set_xlabel('dN/dS ratio')
+        ax2.set_ylabel('Frequency')
+        ax2.set_title('Distribution Comparison')
+        ax2.legend()
+        ax2.set_xlim(0, 2)
+        
+        # Boxplot comparison
+        ax3 = axes[2]
+        plot_data = []
+        labels = []
+        if len(simple_vals) > 0:
+            plot_data.append(simple_vals)
+            labels.append(f'Simple\n(mean={simple_vals.mean():.3f})')
+        if len(ng86_vals) > 0:
+            plot_data.append(ng86_vals)
+            labels.append(f'NG86\n(mean={ng86_vals.mean():.3f})')
+        
+        if plot_data:
+            bp = ax3.boxplot(plot_data, labels=labels)
+            ax3.set_ylabel('dN/dS ratio')
+            ax3.set_title('Method Comparison')
+            ax3.axhline(y=1, color='r', linestyle='--', alpha=0.5, label='Neutral evolution')
+            ax3.legend()
+        
+        plt.tight_layout()
+        plot_file = self.output_dir / 'plots' / 'method_comparison.png'
+        plt.savefig(plot_file, dpi=150, bbox_inches='tight')
+        plt.close()
+        self.logger.info(f"Method comparison plot saved to {plot_file}")
+    
     def create_visualizations(self, operon_df, core_df):
         """Create comprehensive visualizations."""
-        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
-        fig.suptitle('dN/dS Analysis Results', fontsize=16, fontweight='bold')
+        # First create method comparison if both methods are available
+        if not operon_df.empty:
+            self.create_method_comparison_plot(operon_df)
         
-        # 1. dN/dS distribution comparison
+        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        fig.suptitle('dN/dS Analysis Results (NG86 Method)', fontsize=16, fontweight='bold')
+        
+        # 1. dN/dS distribution comparison (using NG86 method)
         ax = axes[0, 0]
-        if not operon_df.empty and 'dn_ds_ratio' in operon_df.columns:
-            operon_ratios = operon_df['dn_ds_ratio'].dropna()
-            ax.hist(operon_ratios[operon_ratios != np.inf], bins=30, alpha=0.7, 
+        # Use NG86 values if available, otherwise fall back to simple
+        ratio_col = 'ng86_dn_ds' if 'ng86_dn_ds' in operon_df.columns else 'dn_ds_ratio'
+        if not operon_df.empty and ratio_col in operon_df.columns:
+            operon_ratios = operon_df[ratio_col].dropna()
+            operon_ratios = operon_ratios[np.isfinite(operon_ratios)]
+            ax.hist(operon_ratios, bins=30, alpha=0.7, 
                    label=f'Operon genes (n={len(operon_ratios)})', color='blue')
         
         if not core_df.empty and 'dn_ds_ratio' in core_df.columns:
@@ -363,24 +822,60 @@ class DNdSAnalyzer:
             if not operon_df.empty:
                 f.write(f"Total genes analyzed: {len(operon_df)}\n")
                 
-                if 'dn_ds_ratio' in operon_df.columns:
-                    ratios = operon_df['dn_ds_ratio'].dropna()
-                    ratios_finite = ratios[ratios != np.inf]
+                # Report NG86 method results (primary)
+                if 'ng86_dn_ds' in operon_df.columns:
+                    f.write(f"\n=== NG86 METHOD (Site-normalized with JC correction) ===\n")
+                    ratios = operon_df['ng86_dn_ds'].dropna()
+                    ratios_finite = ratios[np.isfinite(ratios)]
                     
-                    f.write(f"\ndN/dS Statistics:\n")
-                    f.write(f"  Mean: {ratios_finite.mean():.4f}\n")
-                    f.write(f"  Median: {ratios_finite.median():.4f}\n")
-                    f.write(f"  Std Dev: {ratios_finite.std():.4f}\n")
-                    f.write(f"  Min: {ratios_finite.min():.4f}\n")
-                    f.write(f"  Max: {ratios_finite.max():.4f}\n")
-                    f.write(f"  25th percentile: {ratios_finite.quantile(0.25):.4f}\n")
-                    f.write(f"  75th percentile: {ratios_finite.quantile(0.75):.4f}\n")
+                    f.write(f"\ndN/dS Statistics (NG86):\n")
+                    if len(ratios_finite) > 0:
+                        f.write(f"  Mean: {ratios_finite.mean():.4f}\n")
+                        f.write(f"  Median: {ratios_finite.median():.4f}\n")
+                        f.write(f"  Std Dev: {ratios_finite.std():.4f}\n")
+                        f.write(f"  Min: {ratios_finite.min():.4f}\n")
+                        f.write(f"  Max: {ratios_finite.max():.4f}\n")
+                        f.write(f"  25th percentile: {ratios_finite.quantile(0.25):.4f}\n")
+                        f.write(f"  75th percentile: {ratios_finite.quantile(0.75):.4f}\n")
+                        
+                        f.write(f"\nSelection Categories (NG86):\n")
+                        f.write(f"  Strong purifying (ω < 0.1): {sum(ratios_finite < 0.1)} genes\n")
+                        f.write(f"  Purifying (0.1 ≤ ω < 0.5): {sum((ratios_finite >= 0.1) & (ratios_finite < 0.5))} genes\n")
+                        f.write(f"  Weak purifying (0.5 ≤ ω < 1): {sum((ratios_finite >= 0.5) & (ratios_finite < 1))} genes\n")
+                        f.write(f"  Neutral/positive (ω ≥ 1): {sum(ratios_finite >= 1)} genes\n")
                     
-                    f.write(f"\nSelection Categories:\n")
-                    f.write(f"  Strong purifying (dN/dS < 0.1): {sum(ratios_finite < 0.1)}\n")
-                    f.write(f"  Purifying (0.1 ≤ dN/dS < 0.5): {sum((ratios_finite >= 0.1) & (ratios_finite < 0.5))}\n")
-                    f.write(f"  Weak purifying (0.5 ≤ dN/dS < 1): {sum((ratios_finite >= 0.5) & (ratios_finite < 1))}\n")
-                    f.write(f"  Neutral/positive (dN/dS ≥ 1): {sum(ratios_finite >= 1)}\n")
+                    if 'ng86_mean_dN' in operon_df.columns:
+                        f.write(f"\nRate Statistics (NG86):\n")
+                        f.write(f"  Mean dN: {operon_df['ng86_mean_dN'].mean():.6f}\n")
+                        f.write(f"  Mean dS: {operon_df['ng86_mean_dS'].mean():.6f}\n")
+                        f.write(f"  Mean S-sites: {operon_df['ng86_S_sites'].mean():.1f}\n")
+                        f.write(f"  Mean N-sites: {operon_df['ng86_N_sites'].mean():.1f}\n")
+                    
+                    if 'ng86_syn_diffs' in operon_df.columns:
+                        f.write(f"\nSubstitution Counts (NG86 method):\n")
+                        f.write(f"  Mean synonymous differences: {operon_df['ng86_syn_diffs'].mean():.2f}\n")
+                        f.write(f"  Mean non-synonymous differences: {operon_df['ng86_nonsyn_diffs'].mean():.2f}\n")
+                        f.write(f"  Total valid codons analyzed: {operon_df['ng86_total_codons'].sum()}\n")
+                
+                # Report site-based SNP counts
+                if 'codon_variable_sites' in operon_df.columns:
+                        f.write(f"\nSite-based SNP Counts (simple, readable):\n")
+                        f.write(f"  Total variable codon sites: {operon_df['codon_variable_sites'].sum()}\n")
+                        f.write(f"  Synonymous sites: {operon_df['codon_syn_sites'].sum()}\n")
+                        f.write(f"  Non-synonymous sites: {operon_df['codon_nonsyn_sites'].sum()}\n")
+                        f.write(f"  Mean synonymous fraction: {operon_df['codon_syn_fraction'].mean():.3f}\n")
+                
+                # Report simple method for comparison
+                if 'simple_dn_ds' in operon_df.columns:
+                    f.write(f"\n=== SIMPLE METHOD (Count-based, no normalization) ===\n")
+                    simple_ratios = operon_df['simple_dn_ds'].dropna()
+                    simple_finite = simple_ratios[np.isfinite(simple_ratios)]
+                    
+                    if len(simple_finite) > 0:
+                        f.write(f"\ndN/dS Statistics (Simple):\n")
+                        f.write(f"  Mean: {simple_finite.mean():.4f}\n")
+                        f.write(f"  Median: {simple_finite.median():.4f}\n")
+                        f.write(f"  Note: Simple method overestimates ω due to lack of site normalization\n")
                 
                 if 'synonymous' in operon_df.columns and 'non_synonymous' in operon_df.columns:
                     f.write(f"\nSubstitution Statistics:\n")
@@ -492,6 +987,14 @@ class DNdSAnalyzer:
         self.logger.info("Starting dN/dS Analysis Pipeline")
         self.logger.info("="*60)
         
+        # Log analysis mode
+        if self.operon_dir and self.core_dir:
+            self.logger.info("Mode: Analyzing both operon and core genes")
+        elif self.operon_dir:
+            self.logger.info("Mode: Analyzing operon genes only")
+        elif self.core_dir:
+            self.logger.info("Mode: Analyzing core genes only")
+        
         # Process operon alignments
         operon_df = pd.DataFrame()
         if self.operon_dir and self.operon_dir.exists():
@@ -588,19 +1091,50 @@ def main():
         default=1,
         help='Number of threads for parallel processing (default: 1)'
     )
+    parser.add_argument(
+        '--include-simple',
+        action='store_true',
+        help='Also compute the naive count ratio (slower for large datasets)'
+    )
+    parser.add_argument(
+        '--mode',
+        type=str,
+        choices=['both', 'operon', 'core'],
+        default='both',
+        help='Which gene sets to analyze: both (default), operon, or core'
+    )
     
     args = parser.parse_args()
     
+    # Handle mode-based directory requirements
+    if args.mode == 'operon':
+        if not args.operon_dir:
+            # Use default operon directory
+            args.operon_dir = '../05_operon_assembly_extraction/output/msa/dna_alignments'
+        args.core_dir = None  # Disable core analysis
+    elif args.mode == 'core':
+        if not args.core_dir:
+            # Use default core directory
+            args.core_dir = '../04_core_gene_analysis/output/core_gene_alignments'
+        args.operon_dir = None  # Disable operon analysis
+    else:  # mode == 'both'
+        # Use defaults if not provided
+        if not args.operon_dir:
+            args.operon_dir = '../05_operon_assembly_extraction/output/msa/dna_alignments'
+        if not args.core_dir:
+            args.core_dir = '../04_core_gene_analysis/output/core_gene_alignments'
+    
     # Validate that at least one input directory is provided
     if not args.operon_dir and not args.core_dir:
-        parser.error("At least one of --operon-dir or --core-dir must be provided")
+        parser.error("No input directories available for the selected mode")
     
     # Run the pipeline
     analyzer = DNdSAnalyzer(
         operon_dir=args.operon_dir,
         core_dir=args.core_dir,
         output_dir=args.output_dir,
-        threads=args.threads
+        threads=args.threads,
+        include_simple=args.include_simple
     )
     
     analyzer.run()
