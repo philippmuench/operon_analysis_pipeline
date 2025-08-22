@@ -432,17 +432,22 @@ def calculate_shannon_entropy(alignment_file: str) -> Tuple[List[float], Dict]:
         alignment_length = len(sequences[0].seq)
     conservation_scores = []
     
+    # Variables for fast pairwise identity calculation
+    pairwise_identity_sum = 0.0
+    pairwise_identity_cols = 0
+    
     for pos in range(alignment_length):
         # Count nucleotides at this position
         char_counts = defaultdict(int)
+        total_chars = 0
         for seq in sequences:
             if pos < len(seq.seq):
                 char = str(seq.seq[pos]).upper()
                 if char in 'ACGT':
                     char_counts[char] += 1
+                    total_chars += 1
         
         # Calculate Shannon entropy
-        total_chars = sum(char_counts.values())
         if total_chars == 0:
             conservation_scores.append(0.0)
             continue
@@ -457,6 +462,17 @@ def calculate_shannon_entropy(alignment_file: str) -> Tuple[List[float], Dict]:
         max_entropy = 2.0  # DNA alphabet - fixed 2-bit normalization
         conservation = 1 - (entropy / max_entropy) if max_entropy > 0 else 1.0
         conservation_scores.append(conservation)
+        
+        # Fast pairwise identity calculation using the count-based formula
+        if total_chars >= 2:
+            num_pairs_equal = sum(c*(c-1)//2 for c in char_counts.values())
+            den_pairs = total_chars*(total_chars-1)//2
+            if den_pairs > 0:
+                pairwise_identity_sum += (num_pairs_equal / den_pairs)
+                pairwise_identity_cols += 1
+    
+    # Calculate mean pairwise identity
+    mean_pairwise_identity = (pairwise_identity_sum / pairwise_identity_cols * 100) if pairwise_identity_cols > 0 else 0.0
     
     # Calculate metadata
     metadata = {
@@ -464,7 +480,7 @@ def calculate_shannon_entropy(alignment_file: str) -> Tuple[List[float], Dict]:
         'alignment_length': alignment_length,
         'mean_conservation': np.mean(conservation_scores),
         'gap_percentage': calculate_gap_percentage(sequences),
-        'pairwise_identity': calculate_pairwise_identity(sequences)
+        'pairwise_identity': mean_pairwise_identity
     }
     
     return conservation_scores, metadata
@@ -748,25 +764,37 @@ def calculate_gap_percentage(sequences: List) -> float:
 
 
 def calculate_pairwise_identity(sequences: List) -> float:
-    """Calculate mean pairwise identity."""
+    """Calculate mean pairwise identity using fast count-based method."""
     if len(sequences) < 2:
         return 100.0
     
-    identities = []
-    for i in range(len(sequences)-1):
-        for j in range(i+1, len(sequences)):
-            seq1 = str(sequences[i].seq)
-            seq2 = str(sequences[j].seq)
-            
-            matches = sum(1 for a, b in zip(seq1, seq2) 
-                         if a == b and a != '-' and b != '-')
-            length = sum(1 for a, b in zip(seq1, seq2) 
-                        if a != '-' and b != '-')
-            
-            if length > 0:
-                identities.append(matches / length)
+    # Get alignment length (assuming all sequences are same length)
+    alignment_length = min(len(seq.seq) for seq in sequences)
     
-    return np.mean(identities) * 100 if identities else 0.0
+    pairwise_identity_sum = 0.0
+    pairwise_identity_cols = 0
+    
+    for pos in range(alignment_length):
+        # Count characters at this position (excluding gaps)
+        char_counts = defaultdict(int)
+        total_chars = 0
+        
+        for seq in sequences:
+            if pos < len(seq.seq):
+                char = str(seq.seq[pos]).upper()
+                if char != '-' and char in 'ACGT':
+                    char_counts[char] += 1
+                    total_chars += 1
+        
+        # Fast pairwise identity calculation using the count-based formula
+        if total_chars >= 2:
+            num_pairs_equal = sum(c*(c-1)//2 for c in char_counts.values())
+            den_pairs = total_chars*(total_chars-1)//2
+            if den_pairs > 0:
+                pairwise_identity_sum += (num_pairs_equal / den_pairs)
+                pairwise_identity_cols += 1
+    
+    return (pairwise_identity_sum / pairwise_identity_cols * 100) if pairwise_identity_cols > 0 else 0.0
 
 
 # ============================================================================

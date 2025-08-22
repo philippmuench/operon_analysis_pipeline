@@ -103,7 +103,16 @@ output/gene_boundary_analysis/
 
 The pipeline calculates:
 - **Shannon entropy**: Position-specific conservation (0=variable, 1=conserved)
-- **Pairwise identity**: Average sequence similarity
+  - For each position in the alignment, counts nucleotide frequencies (A, C, G, T)
+  - Calculates Shannon entropy: H = -Σ(p × log₂(p)) where p is the frequency of each nucleotide
+  - Converts to conservation score: Conservation = 1 - (H / 2.0) where 2.0 is the maximum entropy for DNA
+  - Higher scores indicate more conserved positions
+- **Pairwise identity**: Average sequence similarity using efficient count-based calculation
+  - For each position, counts occurrences of each nucleotide
+  - Calculates number of equal pairs: Σ(count × (count-1) / 2) for each nucleotide
+  - Divides by total number of possible pairs: N × (N-1) / 2 where N is number of sequences
+  - Averages across all positions to get mean pairwise identity
+  - **Performance note**: Uses O(N×L) algorithm instead of O(N²×L) for fast computation with large datasets
 - **Gap percentage**: Alignment quality indicator
 - **Sequence coverage**: Number of genomes with each gene
 

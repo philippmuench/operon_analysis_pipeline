@@ -18,6 +18,11 @@
 !*/output/*summary*.txt
 !*/plots/*.png
 
+# Allow step 05 conservation outputs
+!05_operon_assembly_extraction/output/operon_conservation_metrics.csv
+!05_operon_assembly_extraction/output/plots/*.png
+!05_operon_assembly_extraction/output/plots/*.pdf
+
 # Allow step 09 key outputs
 !09_operon_order_analysis/output/gene_cooccurrence_matrix.csv
 !09_operon_order_analysis/output/gene_order_visualization.pdf
