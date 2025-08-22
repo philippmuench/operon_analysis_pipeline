@@ -725,23 +725,22 @@ def create_gap_plots(msa_dir: str, output_dir: str, title_suffix: str = "") -> N
             print(f"    Warning: No valid alignment for {gene_name}")
             continue
         
-        # Create gap fraction plot
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10), height_ratios=[1, 1])
+        # Create single gap fraction plot
+        fig, ax = plt.subplots(figsize=(15, 6))
         positions = np.arange(len(gap_fractions))
         
-        # Top panel: Gap fraction plot
-        ax1.plot(positions, gap_fractions, color='red', linewidth=1.5, alpha=0.8)
-        ax1.fill_between(positions, gap_fractions, alpha=0.3, color='red')
-        ax1.set_xlabel('Position', fontsize=12)
-        ax1.set_ylabel('Gap Fraction', fontsize=12)
-        ax1.set_title(f'{gene_name} Gap Distribution{" - " + title_suffix if title_suffix else ""}',
-                     fontsize=14, fontweight='bold')
-        ax1.set_ylim(0, 1.05)
-        ax1.grid(True, alpha=0.3)
+        # Gap fraction plot without fill overlay
+        ax.plot(positions, gap_fractions, color='red', linewidth=1.5, alpha=0.8)
+        ax.set_xlabel('Position', fontsize=12)
+        ax.set_ylabel('Gap Fraction', fontsize=12)
+        ax.set_title(f'{gene_name} Gap Distribution{" - " + title_suffix if title_suffix else ""}',
+                    fontsize=14, fontweight='bold')
+        ax.set_ylim(0, 1.05)
+        ax.grid(True, alpha=0.3)
         
         # Add horizontal lines for reference
-        ax1.axhline(y=0.5, color='gray', linestyle='--', alpha=0.5, label='50% gaps')
-        ax1.axhline(y=0.9, color='gray', linestyle=':', alpha=0.5, label='90% gaps')
+        ax.axhline(y=0.5, color='gray', linestyle='--', alpha=0.5, label='50% gaps')
+        ax.axhline(y=0.9, color='gray', linestyle=':', alpha=0.5, label='90% gaps')
         
         # Add metadata text
         info_text = (f"Sequences: {metadata['num_sequences']:,}\n"
@@ -749,27 +748,10 @@ def create_gap_plots(msa_dir: str, output_dir: str, title_suffix: str = "") -> N
                     f"Mean gap fraction: {metadata['mean_gap_fraction']:.3f}\n"
                     f"Max gap fraction: {metadata['max_gap_fraction']:.3f}\n"
                     f"Positions with gaps: {metadata['positions_with_gaps_pct']:.1f}%")
-        ax1.text(0.02, 0.98, info_text, transform=ax1.transAxes,
-                fontsize=10, verticalalignment='top',
-                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
-        ax1.legend(loc='upper right', fontsize=10)
-        
-        # Bottom panel: Histogram of gap fractions
-        # More efficient than conservation correlation for large alignments
-        ax2.hist(gap_fractions, bins=50, color='darkred', alpha=0.7, edgecolor='black')
-        ax2.set_xlabel('Gap Fraction', fontsize=12)
-        ax2.set_ylabel('Number of Positions', fontsize=12)
-        ax2.set_title(f'Gap Fraction Distribution for {gene_name}', fontsize=13, fontweight='bold')
-        ax2.set_xlim(-0.05, 1.05)
-        ax2.grid(True, alpha=0.3, axis='y')
-        
-        # Add statistics to the histogram
-        gap_stats_text = (f"Positions with no gaps: {sum(1 for g in gap_fractions if g == 0):,}\n"
-                         f"Positions with >50% gaps: {sum(1 for g in gap_fractions if g > 0.5):,}\n"
-                         f"Positions with >90% gaps: {sum(1 for g in gap_fractions if g > 0.9):,}")
-        ax2.text(0.98, 0.98, gap_stats_text, transform=ax2.transAxes,
-                fontsize=10, verticalalignment='top', horizontalalignment='right',
-                bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes,
+               fontsize=10, verticalalignment='top',
+               bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+        ax.legend(loc='upper right', fontsize=10)
         
         plt.tight_layout()
         output_file = os.path.join(output_dir, f"{gene_name}_gap_fraction_analysis.png")

@@ -1,156 +1,93 @@
-# Step 6: Diversity Analysis
+# Step 6: Comparative Diversity Analysis
 
-This directory contains scripts for analyzing sequence diversity and conservation patterns in both core genes and operon genes.
+This directory contains scripts for comparative analysis of conservation patterns between core genes and operon genes.
 
 ## Overview
 
-This step performs comprehensive diversity analysis using MSAs from both core genes (step 04) and operon genes (step 05) to compare conservation patterns and evolutionary pressures.
+This step creates conservation ranking visualizations comparing operon genes to core genes using pre-computed metrics from steps 04 and 05. The analysis focuses on visual comparisons showing where operon genes rank among all core genes.
 
 ## Input Data
 
-- Core gene MSAs from `../04_core_gene_analysis/output/core_gene_alignments/`
-- Operon gene MSAs from `../05_operon_assembly_extraction/output/msa/`
-- BLAST results from `../03_blast_search/output/`
+### Exact Files Used
+
+The analysis reads these specific pre-computed CSV files:
+
+1. **Core Gene Metrics** (from Step 04):
+   - File: `../04_core_gene_analysis/output/core_gene_conservation_metrics.csv`
+   - Contains: Conservation scores and pairwise identity for 1,280 core genes
+   - Columns used: `gene`, `mean_conservation`, `mean_pairwise_identity`
+
+2. **Operon Gene Metrics** (from Step 05):
+   - Primary file: `../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/assemblies/msa/operon_conservation_metrics.csv`
+   - Alternative (if primary not found): `../05_operon_assembly_extraction/output/mappings/aa_nt_mapping/prokka/msa/operon_conservation_metrics.csv`
+   - Contains: Conservation scores for 7 operon genes (frpC, glpC, ptsA, ptsB, ptsC, ptsD, fruR)
+   - Columns used: `gene`, `mean_conservation`, `mean_pairwise_identity`
+
+**Note**: The script uses Strategy D (assembly-based tblastn) metrics as the primary source because it provides the most authentic sequence data from raw assemblies.
 
 ## Output Files
 
-All outputs are written to the `output/` directory:
-- `diversity_results.csv`: Comprehensive diversity metrics
-- `conservation_profiles.png`: Position-based conservation plots
-- `promoter_conservation_with_pribnow.png`: Promoter analysis with Pribnow box
-- `gap_analysis.png`: Gap pattern analysis
-- `diversity_summary.png`: Overall summary plots
+All outputs are written to `output/`:
+- `conservation_ranking_bars.png/pdf` - Three-panel bar plot showing top 20, operon genes, and bottom 20 conserved genes
+- `conservation_distribution.png/pdf` - Histogram of conservation distribution with operon genes highlighted
+- `operon_conservation_summary.csv` - Summary table with operon gene rankings and percentiles
 
 ## Scripts
 
-### Main Analysis Scripts
+### `comparative_analysis.py`
+Main comparative analysis script that:
+- Loads pre-computed conservation metrics from steps 04 and 05
+- Creates conservation ranking bar plots
+- Calculates operon gene rankings among core genes
+- Generates summary statistics
+- Does NOT re-calculate MSAs or conservation scores
 
-#### `analyze_diversity.py`
-Main diversity analysis script for coding genes.
-- Calculates pairwise sequence identity
-- Shannon entropy-based conservation scores
-- Position-wise conservation analysis
-- Creates conservation profile plots
-
-#### `analyze_enhanced_diversity.py`
-Enhanced analysis for both coding and non-coding sequences.
-- Comprehensive metrics calculation
-- Multiple visualization types
-- Statistical summaries
-
-#### `analyze_msa_diversity.py`
-Specialized MSA-based diversity analysis.
-- Works directly with alignment files
-- Advanced diversity metrics
-- Phylogenetic considerations
-
-### Comparison Scripts
-
-#### `analyze_all_core_genes.py`
-Analysis focusing on core gene patterns.
-- Core gene specific metrics
-- Comparison with operon genes
-- Baseline establishment
-
-#### `calculate_core_gene_diversity.py`
-Dedicated core gene diversity calculator.
-- Statistical analysis of core genes
-- Distribution analysis
-- Outlier detection
-
-### Visualization Scripts
-
-#### `generate_diversity_summary.py`
-Creates comprehensive summary visualizations.
-- Comparative plots
-- Statistical distributions
-- Publication-ready figures
-
-### Pipeline Scripts
-
-#### `run_complete_diversity_analysis.sh`
-Master pipeline script that runs complete diversity analysis.
-- Orchestrates all analysis steps
-- Handles both core and operon genes
-- Creates all plots and summaries
-
-#### `run_diversity_analysis_array.sh`
-Array job version for large-scale analysis.
+### `run_analysis.sh`
+SLURM script to run the comparative analysis pipeline.
 
 ## Usage
 
-### Complete Analysis
 ```bash
-# Run full diversity analysis pipeline
-sbatch run_complete_diversity_analysis.sh
+# Run comparative analysis via SLURM
+sbatch run_analysis.sh
+
+# Or run directly
+python comparative_analysis.py
 ```
 
-### Individual Analyses
-```bash
-# Analyze coding genes
-python analyze_diversity.py
+## Visualization Details
 
-# Analyze with enhanced features
-python analyze_enhanced_diversity.py
+### Conservation Ranking Bar Plot
+Three-panel visualization showing:
+1. **Top 20 Panel**: Most conserved core genes (green bars)
+2. **Operon Panel**: All 7 operon genes with their rankings (red bars)
+3. **Bottom 20 Panel**: Least conserved core genes (dark red bars)
 
-# Focus on core genes
-python analyze_all_core_genes.py
-```
+Each bar shows:
+- Conservation percentage
+- Rank among all core genes
+- Percentile position
 
-### Custom Analysis
-```bash
-# Specific MSA analysis
-python analyze_msa_diversity.py --input msa_directory/ --output results/
-```
+### Conservation Distribution
+Histogram showing the distribution of conservation scores across all core genes with operon genes highlighted as vertical lines.
 
-## Key Metrics
+## Key Outputs
 
-### Conservation Metrics
-- **Shannon entropy**: Position-wise conservation scores
-- **Pairwise identity**: Sequence similarity measurements
-- **Gap analysis**: Insertion/deletion patterns
-- **Conservation windows**: Regional conservation patterns
+The analysis generates:
+- Visual ranking of operon genes among core genes
+- Percentile positions showing relative conservation
+- Summary statistics comparing mean conservation levels
+- Individual gene rankings and conservation scores
 
-### Diversity Metrics
-- **Nucleotide diversity (π)**: Average pairwise differences
-- **Segregating sites**: Variable positions
-- **Transition/transversion ratios**: Mutation pattern analysis
-- **Selection signatures**: Evidence for natural selection
+## Dependencies
 
-### Comparison Metrics
-- **Core vs. operon**: Comparative conservation analysis
-- **Gene-specific patterns**: Individual gene diversity profiles
-- **Functional categories**: Analysis by gene function
-
-## Key Features
-
-- **Dual comparison**: Core genes vs. operon genes
-- **Multiple metrics**: Comprehensive diversity measurement
-- **Visualization**: Publication-ready plots
-- **Statistical analysis**: Significance testing
-- **Scalable**: Handles large gene sets efficiently
-
-## Integration
-
-This step uses output from:
-- `../04_core_gene_analysis/`: Core gene MSAs and metrics
-- `../05_operon_assembly_extraction/`: Operon gene MSAs
-
-This step provides input for:
-- `../07_dnds_analysis/`: dN/dS ratio calculations
-- Publication figures and tables
-
-## Scientific Rationale
-
-The comparison between core genes and operon genes allows:
-1. **Baseline establishment**: Core genes provide "normal" conservation levels
-2. **Pathway analysis**: Operon genes reveal pathway-specific evolution
-3. **Selection analysis**: Different evolutionary pressures identification
-4. **Functional insights**: Conservation-function relationships
+This step requires completed analyses from:
+- Step 04: Core gene analysis must be complete
+- Step 05: Operon extraction and MSA must be complete
 
 ## Notes
 
-- Analysis requires high-quality MSAs from previous steps
-- Statistical significance depends on number of sequences analyzed
-- Core gene analysis provides crucial baseline for operon comparison
-- Results directly inform biological interpretation of operon evolution
+- Analysis uses pre-computed metrics to avoid redundant calculations
+- Statistical tests are non-parametric to handle non-normal distributions
+- Multiple extraction strategies from step 05 are compared simultaneously
+- Results provide quantitative support for manuscript conclusions
