@@ -9,6 +9,11 @@ import pandas as pd
 import numpy as np
 import argparse
 from collections import Counter
+try:
+    from scipy.stats import fisher_exact, chi2_contingency
+    HAS_SCIPY = True
+except ImportError:
+    HAS_SCIPY = False
 
 def generate_manuscript_stats(output_file=None):
     """Generate all statistics for manuscript.
@@ -184,6 +189,88 @@ def generate_manuscript_stats(output_file=None):
         pts_alt_starts = pts_df['upstream_candidate_found'].sum()
         pts_alt_pct = 100 * pts_alt_starts / len(pts_df)
         output_lines.append(f"• PTS genes show {pts_alt_pct:.1f}% frequency of alternative start sites")
+    
+    # ptsA laboratory pattern analysis
+    output_lines.append("")
+    output_lines.append("ptsA Laboratory Adaptation Pattern:")
+    output_lines.append("-" * 40)
+    
+    # Load metadata if available
+    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+    if os.path.exists(metadata_file):
+        metadata_df = pd.read_csv(metadata_file, sep='\t')
+        
+        # Extract genome ID from file name to match with AS_barcode
+        df_ptsa = df.copy()
+        df_ptsa['AS_barcode'] = df_ptsa['genome_id'].str.replace('.result', '', regex=False)
+        
+        # Merge with metadata
+        merged_df = df_ptsa.merge(metadata_df, on='AS_barcode', how='left')
+        
+        # Filter for ptsA gene only
+        ptsa_df = merged_df[merged_df['gene'] == 'ptsA'].copy()
+        
+        if len(ptsa_df) > 0:
+            # Overall ptsA statistics
+            ptsa_total = len(ptsa_df)
+            ptsa_ttg = (ptsa_df['start_codon'] == 'TTG').sum()
+            ptsa_atg = (ptsa_df['start_codon'] == 'ATG').sum()
+            ptsa_gtg = (ptsa_df['start_codon'] == 'GTG').sum()
+            
+            output_lines.append(f"• ptsA total instances: {ptsa_total}")
+            output_lines.append(f"• ptsA start codon usage:")
+            output_lines.append(f"  - TTG (canonical): {ptsa_ttg} ({100*ptsa_ttg/ptsa_total:.1f}%)")
+            output_lines.append(f"  - ATG: {ptsa_atg} ({100*ptsa_atg/ptsa_total:.1f}%)")
+            output_lines.append(f"  - GTG: {ptsa_gtg} ({100*ptsa_gtg/ptsa_total:.1f}%)")
+            
+            # Laboratory vs other niches
+            lab_data = ptsa_df[ptsa_df['Source Niche'] == 'Laboratory']
+            other_data = ptsa_df[(ptsa_df['Source Niche'] != 'Laboratory') & ptsa_df['Source Niche'].notna()]
+            
+            if len(lab_data) > 0 and len(other_data) > 0:
+                lab_atg_count = (lab_data['start_codon'] == 'ATG').sum()
+                lab_ttg_count = (lab_data['start_codon'] == 'TTG').sum()
+                other_atg_count = (other_data['start_codon'] == 'ATG').sum()
+                other_ttg_count = (other_data['start_codon'] == 'TTG').sum()
+                
+                lab_atg_pct = 100 * lab_atg_count / len(lab_data)
+                other_atg_pct = 100 * other_atg_count / len(other_data)
+                
+                output_lines.append("")
+                output_lines.append(f"• Laboratory-specific pattern:")
+                output_lines.append(f"  - Laboratory strains (n={len(lab_data)}): {lab_atg_pct:.1f}% ATG, {100-lab_atg_pct:.1f}% TTG")
+                output_lines.append(f"  - Other niches (n={len(other_data)}): {other_atg_pct:.1f}% ATG, {100-other_atg_pct:.1f}% TTG")
+                
+                # Statistical test if scipy available
+                if HAS_SCIPY and lab_ttg_count > 0 and other_atg_count > 0:
+                    contingency_table = np.array([[lab_atg_count, lab_ttg_count],
+                                                  [other_atg_count, other_ttg_count]])
+                    odds_ratio, p_value = fisher_exact(contingency_table)
+                    
+                    output_lines.append(f"  - Fisher's exact test p-value: {p_value:.4e}")
+                    output_lines.append(f"  - Odds ratio: {odds_ratio:.2f}")
+                    
+                    if p_value < 0.001:
+                        output_lines.append(f"  - Result: Highly significant (p < 0.001)")
+                    elif p_value < 0.01:
+                        output_lines.append(f"  - Result: Significant (p < 0.01)")
+                    elif p_value < 0.05:
+                        output_lines.append(f"  - Result: Significant (p < 0.05)")
+                    else:
+                        output_lines.append(f"  - Result: Not significant")
+                    
+                    output_lines.append("")
+                    output_lines.append(f"• KEY FINDING: Laboratory strains show {lab_atg_pct-other_atg_pct:.1f}% higher ATG usage in ptsA")
+                    if odds_ratio > 1:
+                        output_lines.append(f"  Laboratory strains are {odds_ratio:.1f}x more likely to use ATG than other niches")
+                elif not HAS_SCIPY:
+                    output_lines.append("  - Statistical test requires scipy library")
+            else:
+                output_lines.append("• Insufficient data for laboratory vs other comparison")
+        else:
+            output_lines.append("• No ptsA genes found in dataset")
+    else:
+        output_lines.append("• Metadata file not found - cannot analyze laboratory pattern")
     
     output_lines.append("")
     output_lines.append("="*60)

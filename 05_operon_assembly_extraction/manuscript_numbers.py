@@ -9,6 +9,11 @@ import pandas as pd
 from collections import defaultdict, Counter
 import numpy as np
 from Bio import SeqIO
+import sys
+try:
+    from scipy.stats import fisher_exact
+except ImportError:
+    fisher_exact = None
 
 def analyze_blast_extraction_results():
     """Analyze BLAST-based sequence extraction statistics."""
@@ -248,6 +253,82 @@ def get_extraction_methods():
     
     return methods
 
+def analyze_ptsa_start_codon_pattern():
+    """Analyze the laboratory-specific ptsA start codon pattern.
+    
+    This analysis identifies a key finding: ptsA gene, which canonically uses TTG start codon,
+    shows significantly higher ATG usage in laboratory-adapted strains.
+    """
+    
+    try:
+        # Check if the start site analysis has been run
+        summary_file = "../08_start_site_analysis/output/start_site_summary.tsv"
+        metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+        
+        if not os.path.exists(summary_file):
+            return {"error": "Start site analysis not yet run (Step 08)"}
+        
+        if not os.path.exists(metadata_file):
+            return {"error": "Metadata file not found"}
+        
+        # Load and analyze the data
+        summary_df = pd.read_csv(summary_file, sep='\t')
+        metadata_df = pd.read_csv(metadata_file, sep='\t')
+        
+        # Extract genome ID from file name to match with AS_barcode
+        summary_df['AS_barcode'] = summary_df['genome_id'].str.replace('.result', '', regex=False)
+        
+        # Merge with metadata
+        merged_df = summary_df.merge(metadata_df, on='AS_barcode', how='left')
+        
+        # Filter for ptsA gene only
+        ptsa_df = merged_df[merged_df['gene'] == 'ptsA'].copy()
+        
+        # Overall statistics
+        overall_counts = ptsa_df['start_codon'].value_counts()
+        overall_pct = ptsa_df['start_codon'].value_counts(normalize=True) * 100
+        
+        # Laboratory vs others
+        lab_data = ptsa_df[ptsa_df['Source Niche'] == 'Laboratory']
+        other_data = ptsa_df[(ptsa_df['Source Niche'] != 'Laboratory') & ptsa_df['Source Niche'].notna()]
+        
+        stats = {
+            'total_ptsa': len(ptsa_df),
+            'overall_ttg_pct': overall_pct.get('TTG', 0),
+            'overall_atg_pct': overall_pct.get('ATG', 0),
+            'overall_gtg_pct': overall_pct.get('GTG', 0)
+        }
+        
+        if len(lab_data) > 0 and len(other_data) > 0:
+            lab_atg = len(lab_data[lab_data['start_codon'] == 'ATG'])
+            lab_ttg = len(lab_data[lab_data['start_codon'] == 'TTG'])
+            other_atg = len(other_data[other_data['start_codon'] == 'ATG'])
+            other_ttg = len(other_data[other_data['start_codon'] == 'TTG'])
+            
+            stats['lab_atg_pct'] = (lab_atg / len(lab_data)) * 100
+            stats['lab_ttg_pct'] = (lab_ttg / len(lab_data)) * 100
+            stats['other_atg_pct'] = (other_atg / len(other_data)) * 100
+            stats['other_ttg_pct'] = (other_ttg / len(other_data)) * 100
+            stats['lab_n'] = len(lab_data)
+            stats['other_n'] = len(other_data)
+            
+            # Fisher's exact test
+            if fisher_exact is not None and lab_ttg > 0 and other_atg > 0:
+                contingency_table = np.array([[lab_atg, lab_ttg], [other_atg, other_ttg]])
+                odds_ratio, p_value = fisher_exact(contingency_table)
+            else:
+                # Fallback to simple calculation if scipy not available
+                odds_ratio = (lab_atg * other_ttg) / (lab_ttg * other_atg) if (lab_ttg * other_atg) > 0 else float('inf')
+                p_value = None  # Can't calculate without scipy
+            
+            stats['odds_ratio'] = odds_ratio
+            stats['p_value'] = p_value
+        
+        return stats
+        
+    except Exception as e:
+        return {"error": f"Error analyzing ptsA pattern: {str(e)}"}
+
 def generate_manuscript_stats():
     """Generate all statistics for manuscript."""
     
@@ -313,6 +394,43 @@ def generate_manuscript_stats():
             print(f"     - Identity threshold: {details['threshold_identity']}")
             print(f"     - Coverage threshold: {details['threshold_coverage']}")
     
+    # ptsA start codon pattern analysis
+    print(f"\n6. ptsA Start Codon Pattern Analysis:")
+    ptsa_stats = analyze_ptsa_start_codon_pattern()
+    
+    if "error" not in ptsa_stats:
+        print(f"   Total ptsA genes analyzed: {ptsa_stats['total_ptsa']}")
+        print(f"   Overall start codon usage:")
+        print(f"     - TTG: {ptsa_stats['overall_ttg_pct']:.1f}% (canonical for ptsA)")
+        print(f"     - ATG: {ptsa_stats['overall_atg_pct']:.1f}%")
+        print(f"     - GTG: {ptsa_stats['overall_gtg_pct']:.1f}%")
+        
+        if ptsa_stats.get('lab_atg_pct') is not None:
+            print(f"\n   Laboratory-specific pattern:")
+            print(f"     - Laboratory strains (n={ptsa_stats.get('lab_n', 0)}):")
+            print(f"       ATG: {ptsa_stats['lab_atg_pct']:.1f}%")
+            print(f"       TTG: {ptsa_stats['lab_ttg_pct']:.1f}%")
+            print(f"     - Other niches (n={ptsa_stats.get('other_n', 0)}):")
+            print(f"       ATG: {ptsa_stats['other_atg_pct']:.1f}%")
+            print(f"       TTG: {ptsa_stats['other_ttg_pct']:.1f}%")
+            print(f"     - Statistical significance:")
+            print(f"       Odds ratio: {ptsa_stats['odds_ratio']:.2f}")
+            
+            if ptsa_stats.get('p_value') is not None:
+                print(f"       P-value: {ptsa_stats['p_value']:.4e}")
+                if ptsa_stats['p_value'] < 0.001:
+                    print(f"       Result: Highly significant (p < 0.001)")
+                elif ptsa_stats['p_value'] < 0.01:
+                    print(f"       Result: Significant (p < 0.01)")
+                elif ptsa_stats['p_value'] < 0.05:
+                    print(f"       Result: Significant (p < 0.05)")
+                else:
+                    print(f"       Result: Not significant")
+            else:
+                print(f"       P-value: Requires scipy for calculation")
+    else:
+        print(f"   {ptsa_stats['error']}")
+    
     # Summary for manuscript
     print("\n" + "=" * 60)
     print("MANUSCRIPT NUMBERS SUMMARY:")
@@ -331,12 +449,24 @@ def generate_manuscript_stats():
     print(f"MAFFT version 7.490 with automatic algorithm selection")
     print(f"Conservation plots generated: {plot_stats['total_plots']}")
     
+    # Add ptsA pattern to summary
+    if "error" not in ptsa_stats and ptsa_stats.get('lab_atg_pct') is not None:
+        print(f"\nptsA LABORATORY ADAPTATION:")
+        print(f"ptsA normally uses TTG start codon ({ptsa_stats['overall_ttg_pct']:.1f}%)")
+        print(f"Laboratory strains show ATG usage: {ptsa_stats['lab_atg_pct']:.1f}%")
+        print(f"Other niches show ATG usage: {ptsa_stats['other_atg_pct']:.1f}%")
+        if ptsa_stats.get('p_value') is not None:
+            print(f"Statistical significance: p = {ptsa_stats['p_value']:.4e}")
+        elif ptsa_stats.get('odds_ratio') is not None:
+            print(f"Odds ratio: {ptsa_stats['odds_ratio']:.2f}")
+    
     return {
         'blast_stats': blast_stats,
         'sequence_stats': seq_stats,
         'msa_stats': msa_stats,
         'plot_stats': plot_stats,
-        'methods': methods
+        'methods': methods,
+        'ptsa_stats': ptsa_stats
     }
 
 if __name__ == "__main__":
