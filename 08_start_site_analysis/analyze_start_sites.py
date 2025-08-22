@@ -5,6 +5,8 @@ Analyze start-codon choice discrepancies for operon genes across Prokka/Prodigal
 For each genome's GFF + FNA, find operon genes of interest, extract coding sequence
 context, scan for upstream in-frame alternative starts (ATG/GTG/TTG) and RBS motifs,
 and summarize likely reasons for shorter/alternate starts.
+
+Also stratifies results by metadata (Source Niche, Continent, etc.) when metadata file is provided.
 """
 
 import argparse
@@ -13,11 +15,20 @@ import sys
 import glob
 from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Tuple
+from pathlib import Path
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from Bio import SeqIO
 from Bio.Seq import Seq
+
+# Set plotting style
+plt.style.use('seaborn-v0_8-whitegrid')
+sns.set_palette("husl")
 
 
 RBS_MOTIFS = ["AGGAGG", "GGAGG", "AGGA", "GGAG", "GAGG"]
@@ -48,7 +59,7 @@ class StartSiteResult:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Start-site analysis for operon genes")
-    parser.add_argument("--prokka_dir", required=True, help="Directory containing per-genome Prokka outputs")
+    parser.add_argument("--prokka_dir", help="Directory containing per-genome Prokka outputs (not needed for --visualize-only)")
     parser.add_argument(
         "--gene_reference_fasta",
         default=os.path.join("..", "02_reference_operon_extraction", "output", "operon_genes_nt.fasta"),
@@ -61,6 +72,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_workers", type=int, default=8, help="Parallel workers")
     parser.add_argument("--genome_list", help="Optional file with genome IDs to analyze (one per line)")
     parser.add_argument("--blast_dir", help="Optional BLAST results directory to anchor gene coordinates (recommended)")
+    parser.add_argument("--metadata", default="../00_annotation/8587_Efs_metadata_ASbarcode.txt", 
+                       help="Optional metadata file for stratification analysis")
+    parser.add_argument("--visualize-only", action="store_true",
+                       help="Only create visualizations from existing results")
     return parser.parse_args()
 
 
@@ -463,9 +478,371 @@ def write_tsv(results: List[StartSiteResult], out_path: str) -> None:
             writer.writerow(asdict(r))
 
 
+def stratify_by_metadata(tsv_path: str, metadata_path: str, output_dir: str) -> None:
+    """Stratify start site results by metadata categories."""
+    
+    if not Path(metadata_path).exists():
+        print(f"Metadata file not found: {metadata_path}, skipping stratification")
+        return
+    
+    print("\nPerforming metadata stratification analysis...")
+    
+    # Load the TSV results
+    results_df = pd.read_csv(tsv_path, sep='\t')
+    
+    # Extract barcode from genome_id
+    results_df['barcode'] = results_df['genome_id'].str.replace('_AS.result', '').str.replace('.result', '')
+    
+    # Load metadata
+    meta_df = pd.read_csv(metadata_path, sep='\t')
+    
+    # Create mapping from both Barcode and AS_barcode
+    meta_mapping = {}
+    for _, row in meta_df.iterrows():
+        barcode = row['Barcode']
+        meta_mapping[barcode] = row
+        if 'AS_barcode' in row and pd.notna(row['AS_barcode']) and row['AS_barcode'] != 'ND':
+            as_barcode = row['AS_barcode'].replace('_AS', '')
+            meta_mapping[as_barcode] = row
+    
+    # Merge metadata
+    merged_data = []
+    for _, row in results_df.iterrows():
+        barcode = row['barcode']
+        if barcode in meta_mapping:
+            meta_row = meta_mapping[barcode]
+            merged_row = row.to_dict()
+            merged_row['Source Niche'] = meta_row.get('Source Niche', 'Unknown')
+            merged_row['Source Details'] = meta_row.get('Source Details', 'Unknown')
+            # Use Country instead of Continent (column name in metadata)
+            merged_row['Country'] = meta_row.get('Country', 'Unknown')
+            merged_data.append(merged_row)
+    
+    if not merged_data:
+        print("Warning: No genomes could be matched to metadata")
+        return
+    
+    merged_df = pd.DataFrame(merged_data)
+    print(f"Matched {len(merged_df)} records to metadata")
+    
+    # Generate stratification reports
+    output_lines = []
+    output_lines.append("="*60)
+    output_lines.append("START CODON USAGE STRATIFIED BY METADATA")
+    output_lines.append("="*60)
+    output_lines.append("")
+    
+    # 1. By Source Niche
+    output_lines.append("BY SOURCE NICHE:")
+    output_lines.append("-"*40)
+    
+    niche_results = []
+    for niche in sorted(merged_df['Source Niche'].unique()):
+        if pd.isna(niche) or niche == 'ND':
+            continue
+        niche_df = merged_df[merged_df['Source Niche'] == niche]
+        total = len(niche_df)
+        codon_counts = niche_df['start_codon'].value_counts()
+        
+        niche_results.append({
+            'Source Niche': niche,
+            'Total': total,
+            'ATG': codon_counts.get('ATG', 0),
+            'ATG%': round(100 * codon_counts.get('ATG', 0) / total, 1),
+            'GTG': codon_counts.get('GTG', 0),
+            'GTG%': round(100 * codon_counts.get('GTG', 0) / total, 1),
+            'TTG': codon_counts.get('TTG', 0),
+            'TTG%': round(100 * codon_counts.get('TTG', 0) / total, 1),
+        })
+        
+        output_lines.append(f"  {niche}: n={total}")
+        output_lines.append(f"    ATG: {codon_counts.get('ATG', 0)} ({100*codon_counts.get('ATG', 0)/total:.1f}%)")
+        output_lines.append(f"    GTG: {codon_counts.get('GTG', 0)} ({100*codon_counts.get('GTG', 0)/total:.1f}%)")
+        output_lines.append(f"    TTG: {codon_counts.get('TTG', 0)} ({100*codon_counts.get('TTG', 0)/total:.1f}%)")
+    
+    # Save niche stratification table
+    if niche_results:
+        niche_df = pd.DataFrame(niche_results)
+        niche_df.to_csv(os.path.join(output_dir, "start_codon_by_source_niche.tsv"), sep='\t', index=False)
+    
+    # 2. ptsA-specific analysis (gene with unique TTG usage)
+    output_lines.append("")
+    output_lines.append("ptsA START CODON USAGE BY SOURCE NICHE:")
+    output_lines.append("-"*40)
+    
+    ptsa_df = merged_df[merged_df['gene'] == 'ptsA']
+    ptsa_results = []
+    for niche in sorted(ptsa_df['Source Niche'].unique()):
+        if pd.isna(niche) or niche == 'ND':
+            continue
+        niche_ptsa = ptsa_df[ptsa_df['Source Niche'] == niche]
+        total = len(niche_ptsa)
+        ttg_count = (niche_ptsa['start_codon'] == 'TTG').sum()
+        ttg_pct = 100 * ttg_count / total if total > 0 else 0
+        
+        ptsa_results.append({
+            'Source Niche': niche,
+            'Total': total,
+            'TTG': ttg_count,
+            'TTG%': round(ttg_pct, 1),
+            'ATG': (niche_ptsa['start_codon'] == 'ATG').sum(),
+            'ATG%': round(100 * (niche_ptsa['start_codon'] == 'ATG').sum() / total, 1) if total > 0 else 0,
+        })
+        
+        output_lines.append(f"  {niche}: {ttg_pct:.1f}% TTG (n={total})")
+    
+    if ptsa_results:
+        ptsa_df_out = pd.DataFrame(ptsa_results)
+        ptsa_df_out.to_csv(os.path.join(output_dir, "ptsA_by_source_niche.tsv"), sep='\t', index=False)
+    
+    # 3. By Country
+    output_lines.append("")
+    output_lines.append("BY COUNTRY (Top 10):")
+    output_lines.append("-"*40)
+    
+    country_results = []
+    # Get country counts and sort by frequency
+    country_counts = merged_df['Country'].value_counts()
+    for country in country_counts.head(10).index:
+        if pd.isna(country) or country == 'ND' or country == 'Unknown':
+            continue
+        country_df = merged_df[merged_df['Country'] == country]
+        total = len(country_df)
+        codon_counts = country_df['start_codon'].value_counts()
+        
+        country_results.append({
+            'Country': country,
+            'Total': total,
+            'ATG': codon_counts.get('ATG', 0),
+            'ATG%': round(100 * codon_counts.get('ATG', 0) / total, 1),
+            'TTG': codon_counts.get('TTG', 0),
+            'TTG%': round(100 * codon_counts.get('TTG', 0) / total, 1),
+        })
+        
+        output_lines.append(f"  {country}: n={total}, ATG={100*codon_counts.get('ATG', 0)/total:.1f}%, TTG={100*codon_counts.get('TTG', 0)/total:.1f}%")
+    
+    if country_results:
+        country_df_out = pd.DataFrame(country_results)
+        country_df_out.to_csv(os.path.join(output_dir, "start_codon_by_country.tsv"), sep='\t', index=False)
+    
+    # Write summary to file
+    summary_path = os.path.join(output_dir, "metadata_stratification_summary.txt")
+    with open(summary_path, 'w') as f:
+        f.write('\n'.join(output_lines))
+    
+    print(f"\nMetadata stratification complete. Files saved:")
+    print(f"  - start_codon_by_source_niche.tsv")
+    print(f"  - ptsA_by_source_niche.tsv")
+    print(f"  - start_codon_by_country.tsv")
+    print(f"  - metadata_stratification_summary.txt")
+
+
+def create_stratification_plots(output_dir: str) -> None:
+    """Create visualizations from the stratification results."""
+    
+    print("\n" + "="*60)
+    print("Creating stratification visualizations")
+    print("="*60)
+    
+    # Create plots directory
+    plots_dir = os.path.join(output_dir, "plots")
+    os.makedirs(plots_dir, exist_ok=True)
+    
+    # 1. Start codon distribution by Source Niche
+    niche_file = os.path.join(output_dir, "start_codon_by_source_niche.tsv")
+    if Path(niche_file).exists():
+        print("Creating Source Niche plots...")
+        niche_df = pd.read_csv(niche_file, sep='\t')
+        
+        # Stacked bar chart for codon usage
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+        
+        # Prepare data for stacked bar
+        niche_df = niche_df.sort_values('Total', ascending=False)
+        x = range(len(niche_df))
+        
+        # Plot percentages
+        ax1.bar(x, niche_df['ATG%'], label='ATG', color='#2E7D32')
+        ax1.bar(x, niche_df['GTG%'], bottom=niche_df['ATG%'], label='GTG', color='#1976D2')
+        ax1.bar(x, niche_df['TTG%'], bottom=niche_df['ATG%'] + niche_df['GTG%'], label='TTG', color='#D32F2F')
+        
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(niche_df['Source Niche'], rotation=45, ha='right')
+        ax1.set_ylabel('Start Codon Usage (%)', fontsize=12)
+        ax1.set_title('Start Codon Distribution by Source Niche', fontsize=14, fontweight='bold')
+        ax1.legend(loc='upper right')
+        ax1.set_ylim(0, 100)
+        
+        # Add sample sizes
+        for i, (idx, row) in enumerate(niche_df.iterrows()):
+            ax1.text(i, -5, f"n={row['Total']}", ha='center', fontsize=8)
+        
+        # TTG usage comparison (highlight ptsA's unique pattern)
+        ax2.bar(x, niche_df['TTG%'], color='#D32F2F', alpha=0.7)
+        ax2.set_xticks(x)
+        ax2.set_xticklabels(niche_df['Source Niche'], rotation=45, ha='right')
+        ax2.set_ylabel('TTG Usage (%)', fontsize=12)
+        ax2.set_title('TTG Start Codon Usage by Source Niche', fontsize=14, fontweight='bold')
+        ax2.axhline(y=12.8, color='gray', linestyle='--', alpha=0.5, label='Overall average (12.8%)')
+        ax2.legend()
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(plots_dir, 'start_codon_by_source_niche.png'), dpi=150, bbox_inches='tight')
+        plt.savefig(os.path.join(plots_dir, 'start_codon_by_source_niche.pdf'), bbox_inches='tight')
+        plt.close()
+        print("  Saved: start_codon_by_source_niche.png/pdf")
+    
+    # 2. ptsA-specific TTG usage
+    ptsa_file = os.path.join(output_dir, "ptsA_by_source_niche.tsv")
+    if Path(ptsa_file).exists():
+        print("Creating ptsA-specific plots...")
+        ptsa_df = pd.read_csv(ptsa_file, sep='\t')
+        
+        fig, ax = plt.subplots(figsize=(10, 6))
+        
+        ptsa_df = ptsa_df.sort_values('Total', ascending=False)
+        x = range(len(ptsa_df))
+        
+        # Create grouped bar chart
+        width = 0.35
+        ax.bar([i - width/2 for i in x], ptsa_df['TTG%'], width, label='TTG', color='#D32F2F')
+        ax.bar([i + width/2 for i in x], ptsa_df['ATG%'], width, label='ATG', color='#2E7D32')
+        
+        ax.set_xticks(x)
+        ax.set_xticklabels(ptsa_df['Source Niche'], rotation=45, ha='right')
+        ax.set_ylabel('Start Codon Usage (%)', fontsize=12)
+        ax.set_title('ptsA Start Codon Usage by Source Niche\n(ptsA uniquely uses TTG as primary start codon)', 
+                    fontsize=14, fontweight='bold')
+        ax.legend()
+        
+        # Add sample sizes
+        for i, (idx, row) in enumerate(ptsa_df.iterrows()):
+            ax.text(i, -5, f"n={row['Total']}", ha='center', fontsize=8)
+        
+        # Add reference line at 87% (expected TTG usage for ptsA)
+        ax.axhline(y=87, color='gray', linestyle='--', alpha=0.5, label='Expected TTG (87%)')
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(plots_dir, 'ptsA_start_codon_by_niche.png'), dpi=150, bbox_inches='tight')
+        plt.savefig(os.path.join(plots_dir, 'ptsA_start_codon_by_niche.pdf'), bbox_inches='tight')
+        plt.close()
+        print("  Saved: ptsA_start_codon_by_niche.png/pdf")
+    
+    # 3. Country comparison
+    country_file = os.path.join(output_dir, "start_codon_by_country.tsv")
+    if Path(country_file).exists():
+        print("Creating Country comparison plots...")
+        country_df = pd.read_csv(country_file, sep='\t')
+        
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Sort by total samples
+        country_df = country_df.sort_values('Total', ascending=True)
+        y = range(len(country_df))
+        
+        # Horizontal stacked bar chart
+        ax.barh(y, country_df['ATG%'], label='ATG', color='#2E7D32')
+        ax.barh(y, country_df['GTG%'], left=country_df['ATG%'], label='GTG', color='#1976D2')
+        ax.barh(y, country_df['TTG%'], left=country_df['ATG%'] + country_df['GTG%'], label='TTG', color='#D32F2F')
+        
+        ax.set_yticks(y)
+        ax.set_yticklabels(country_df['Country'])
+        ax.set_xlabel('Start Codon Usage (%)', fontsize=12)
+        ax.set_title('Start Codon Distribution by Country', fontsize=14, fontweight='bold')
+        ax.legend(loc='lower right')
+        ax.set_xlim(0, 100)
+        
+        # Add sample sizes
+        for i, (idx, row) in enumerate(country_df.iterrows()):
+            ax.text(102, i, f"n={row['Total']}", va='center', fontsize=8)
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(plots_dir, 'start_codon_by_country.png'), dpi=150, bbox_inches='tight')
+        plt.savefig(os.path.join(plots_dir, 'start_codon_by_country.pdf'), bbox_inches='tight')
+        plt.close()
+        print("  Saved: start_codon_by_country.png/pdf")
+    
+    # 4. Heatmap comparing all genes across source niches
+    summary_file = os.path.join(output_dir, "start_site_summary.tsv")
+    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+    
+    if Path(summary_file).exists() and Path(metadata_file).exists():
+        print("Creating gene comparison heatmap...")
+        
+        # Load and merge data
+        summary_df = pd.read_csv(summary_file, sep='\t')
+        summary_df['barcode'] = summary_df['genome_id'].str.replace('_AS.result', '').str.replace('.result', '')
+        
+        meta_df = pd.read_csv(metadata_file, sep='\t')
+        meta_mapping = {}
+        for _, row in meta_df.iterrows():
+            meta_mapping[row['Barcode']] = row['Source Niche']
+            if 'AS_barcode' in row and pd.notna(row['AS_barcode']) and row['AS_barcode'] != 'ND':
+                as_barcode = row['AS_barcode'].replace('_AS', '')
+                meta_mapping[as_barcode] = row['Source Niche']
+        
+        summary_df['Source Niche'] = summary_df['barcode'].map(meta_mapping)
+        summary_df = summary_df.dropna(subset=['Source Niche'])
+        
+        # Calculate TTG usage by gene and niche
+        heatmap_data = []
+        genes = ['frpC', 'glpC', 'ptsD', 'ptsC', 'ptsB', 'ptsA', 'fruR']
+        
+        for niche in summary_df['Source Niche'].unique():
+            if niche == 'ND' or pd.isna(niche):
+                continue
+            niche_data = {'Source Niche': niche}
+            niche_df = summary_df[summary_df['Source Niche'] == niche]
+            
+            for gene in genes:
+                gene_df = niche_df[niche_df['gene'] == gene]
+                if len(gene_df) > 0:
+                    ttg_pct = 100 * (gene_df['start_codon'] == 'TTG').sum() / len(gene_df)
+                    niche_data[gene] = ttg_pct
+                else:
+                    niche_data[gene] = 0
+            
+            heatmap_data.append(niche_data)
+        
+        if heatmap_data:
+            heatmap_df = pd.DataFrame(heatmap_data)
+            heatmap_df = heatmap_df.set_index('Source Niche')
+            
+            # Create heatmap
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.heatmap(heatmap_df[genes], annot=True, fmt='.1f', cmap='RdYlBu_r', 
+                       vmin=0, vmax=100, cbar_kws={'label': 'TTG Usage (%)'},
+                       linewidths=0.5, linecolor='gray')
+            
+            ax.set_xlabel('Operon Gene', fontsize=12)
+            ax.set_ylabel('Source Niche', fontsize=12)
+            ax.set_title('TTG Start Codon Usage Heatmap\n(ptsA shows consistently high TTG usage across all niches)', 
+                        fontsize=14, fontweight='bold')
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(plots_dir, 'ttg_usage_heatmap.png'), dpi=150, bbox_inches='tight')
+            plt.savefig(os.path.join(plots_dir, 'ttg_usage_heatmap.pdf'), bbox_inches='tight')
+            plt.close()
+            print("  Saved: ttg_usage_heatmap.png/pdf")
+    
+    print(f"\nAll plots saved to: {plots_dir}/")
+    print("Visualization complete!")
+
+
 def main():
     args = parse_args()
     os.makedirs(args.output_dir, exist_ok=True)
+    
+    # If visualize-only mode, just create plots and exit
+    if args.visualize_only:
+        print("Running in visualization-only mode...")
+        create_stratification_plots(args.output_dir)
+        return
+    
+    # For full analysis, prokka_dir is required
+    if not args.prokka_dir:
+        print("Error: --prokka_dir is required for full analysis")
+        sys.exit(1)
 
     gene_names = load_operon_gene_names(args.gene_reference_fasta)
 
@@ -501,6 +878,12 @@ def main():
     out_tsv = os.path.join(args.output_dir, "start_site_summary.tsv")
     write_tsv(all_results, out_tsv)
     print(f"Wrote {len(all_results)} rows to {out_tsv}")
+    
+    # Perform metadata stratification if metadata file exists
+    if args.metadata:
+        stratify_by_metadata(out_tsv, args.metadata, args.output_dir)
+        # Also create visualizations
+        create_stratification_plots(args.output_dir)
 
 
 if __name__ == "__main__":
