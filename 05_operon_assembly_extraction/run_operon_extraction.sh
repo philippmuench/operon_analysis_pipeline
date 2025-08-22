@@ -2,10 +2,11 @@
 #SBATCH --job-name=operon_extraction
 #SBATCH --output=operon_extraction_%j.out
 #SBATCH --error=operon_extraction_%j.err
-#SBATCH --time=6:00:00
+#SBATCH --time=48:00:00
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=24G
+#SBATCH --mem=64G
 #SBATCH --partition=cpu
+#SBATCH --qos=verylong
 
 # Operon Sequence Extraction and MSA Pipeline - Clean Version
 # ============================================================
@@ -16,6 +17,7 @@
 START_STEP=1
 HELP=false
 WITH_GENE_BOUNDARY=false
+METRICS_ONLY=false
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -25,19 +27,21 @@ usage() {
     echo "Options:"
     echo "  --start-step STEP        Start pipeline from specific step (1-5, default: 1)"
     echo "  --with-gene-boundary     Include gene boundary analysis (Strategy A)"
+    echo "  --metrics-only           Only calculate conservation metrics (Step 4)"
     echo "  --help                   Show this help message"
     echo ""
     echo "Available steps:"
     echo "  1. Extract operon gene sequences from assemblies (Strategy D)"
     echo "  2. Create MSAs from gene sequences (DNA & protein)"
     echo "  3. Extract promoter sequences and create promoter MSA"
-    echo "  4. Create conservation plots and metrics"
+    echo "  4. Calculate conservation metrics (plots in step 06)"
     echo "  5. Generate comprehensive summary and statistics"
     echo ""
     echo "Examples:"
     echo "  $0                              # Run complete pipeline"
     echo "  $0 --with-gene-boundary         # Include gene boundary analysis"
-    echo "  $0 --start-step 4               # Create plots only"
+    echo "  $0 --start-step 4               # Resume from step 4"
+    echo "  $0 --metrics-only               # Quick re-run of metrics calculation"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -48,6 +52,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --with-gene-boundary)
             WITH_GENE_BOUNDARY=true
+            shift
+            ;;
+        --metrics-only)
+            METRICS_ONLY=true
+            START_STEP=4
             shift
             ;;
         --help)
@@ -75,7 +84,12 @@ if ! [[ "$START_STEP" =~ ^[1-5]$ ]]; then
 fi
 
 echo "=================================================="
-echo "Operon Sequence Extraction Pipeline (Clean)"
+if [ "$METRICS_ONLY" = true ]; then
+    echo "Operon Conservation Metrics Calculation"
+    echo "(Metrics-only mode - using existing MSAs)"
+else
+    echo "Operon Sequence Extraction Pipeline (Clean)"
+fi
 echo "Started: $(date)"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Starting from step: $START_STEP"
@@ -117,7 +131,7 @@ echo "Conda environment activated: $CONDA_DEFAULT_ENV"
 THREADS=${SLURM_CPUS_PER_TASK:-8}
 
 ########## Step 1: Extract sequences from assemblies (Strategy D) ##########
-if [ $START_STEP -le 1 ]; then
+if [ $START_STEP -le 1 ] && [ "$METRICS_ONLY" = false ]; then
     echo ""
     echo "Step 1: Extracting operon gene sequences from assemblies..."
     echo "==========================================================="
@@ -173,7 +187,7 @@ else
 fi
 
 ########## Step 2: Create MSAs ##########
-if [ $START_STEP -le 2 ]; then
+if [ $START_STEP -le 2 ] && [ "$METRICS_ONLY" = false ]; then
     echo ""
     echo "Step 2: Creating multiple sequence alignments..."
     echo "================================================"
@@ -217,7 +231,7 @@ else
 fi
 
 ########## Step 3: Extract promoter sequences ##########
-if [ $START_STEP -le 3 ]; then
+if [ $START_STEP -le 3 ] && [ "$METRICS_ONLY" = false ]; then
     echo ""
     echo "Step 3: Extracting and aligning promoter sequences..."
     echo "====================================================="
@@ -251,51 +265,103 @@ else
     echo "⏭️  Skipping Step 3: Promoter extraction"
 fi
 
-########## Step 4: Create conservation plots and metrics ##########
+########## Step 4: Create conservation metrics (plots moved to step 06) ##########
 if [ $START_STEP -le 4 ]; then
     echo ""
-    echo "Step 4: Creating conservation plots and metrics..."
+    echo "Step 4: Calculating conservation metrics..."
     echo "=================================================="
-    echo "📊 Generating visualizations and conservation scores"
+    if [ "$METRICS_ONLY" = true ]; then
+        echo "📊 Running in metrics-only mode (using existing MSAs)"
+    else
+        echo "📊 Generating conservation scores (plots will be created in step 06)"
+    fi
     echo ""
     
-    # Create enhanced conservation plots with meaningful names
+    # Generate conservation metrics CSV only (no plotting)
     if [ -d "output/msa/dna_alignments" ]; then
-        echo "Creating conservation plots..."
-        python operon_pipeline.py create-plots \
-            --msa-dir output/msa/dna_alignments \
-            --output-dir output/plots \
-            --title-suffix "Assembly-based extraction"
+        # Count alignment files first
+        ALIGN_COUNT=$(find output/msa/dna_alignments -name "*_aligned.fasta" 2>/dev/null | wc -l)
+        echo "Found $ALIGN_COUNT alignment files in output/msa/dna_alignments"
         
-        if [ $? -eq 0 ]; then
-            echo "✅ Conservation plots created"
+        if [ $ALIGN_COUNT -eq 0 ]; then
+            echo "❌ Error: No alignment files found"
+            echo "   Please ensure Step 2 (MSA creation) completed successfully"
+            exit 1
         fi
         
-        # Generate conservation metrics CSV
-        echo "Generating conservation metrics..."
+        echo "Calculating conservation metrics from alignments..."
+        
+        # Generate basic metrics (for backward compatibility)
         python operon_pipeline.py create-summary \
             --msa-dir output/msa \
             --output-file output/operon_conservation_metrics.csv \
             --strategy-name "Primary Analysis"
         
         if [ $? -eq 0 ]; then
-            echo "✅ Conservation metrics saved to output/operon_conservation_metrics.csv"
+            echo "✅ Basic conservation metrics saved to output/operon_conservation_metrics.csv"
+            
+            # Show summary statistics
+            echo ""
+            echo "Conservation summary:"
+            echo "--------------------"
+            head -n 1 output/operon_conservation_metrics.csv
+            tail -n +2 output/operon_conservation_metrics.csv | head -n 10
+            echo "..."
+            TOTAL_GENES=$(tail -n +2 output/operon_conservation_metrics.csv | wc -l)
+            echo "Total genes analyzed: $TOTAL_GENES"
+            
+            # Calculate average conservation
+            if [ $TOTAL_GENES -gt 0 ]; then
+                AVG_CONS=$(tail -n +2 output/operon_conservation_metrics.csv | \
+                           awk -F',' '{sum+=$4; count++} END {if(count>0) printf "%.3f", sum/count}')
+                echo "Average conservation score: $AVG_CONS"
+            fi
+        else
+            echo "❌ Error: Failed to generate basic conservation metrics"
+            exit 1
         fi
-    fi
-    
-    # Optional: Gene boundary plots
-    if [ "$WITH_GENE_BOUNDARY" = true ] && [ -d "output/gene_boundary_analysis/msa/dna_alignments" ]; then
-        echo ""
-        echo "Creating gene boundary analysis plots..."
         
-        python operon_pipeline.py create-plots \
-            --msa-dir output/gene_boundary_analysis/msa/dna_alignments \
-            --output-dir output/gene_boundary_analysis/plots \
-            --title-suffix "Gene boundary analysis (Prokka-based)"
+        # Generate detailed metrics matching core gene format
+        echo ""
+        echo "Calculating detailed conservation metrics (matching core gene format)..."
+        python operon_pipeline.py create-detailed-summary \
+            --msa-dir output/msa \
+            --output-file output/operon_conservation_metrics_detailed.csv
         
         if [ $? -eq 0 ]; then
-            echo "✅ Gene boundary plots created"
+            echo "✅ Detailed conservation metrics saved to output/operon_conservation_metrics_detailed.csv"
+            echo ""
+            echo "Detailed metrics preview:"
+            echo "------------------------"
+            head -n 5 output/operon_conservation_metrics_detailed.csv
+        else
+            echo "⚠️  Warning: Failed to generate detailed conservation metrics"
         fi
+        
+        # Generate gap fraction plots
+        echo ""
+        echo "Creating gap fraction plots..."
+        python operon_pipeline.py create-gap-plots \
+            --msa-dir output/msa/dna_alignments \
+            --output-dir output/plots/gaps
+        
+        if [ $? -eq 0 ]; then
+            echo "✅ Gap fraction plots saved to output/plots/gaps/"
+            GAP_PLOT_COUNT=$(ls output/plots/gaps/*_gap_fraction_analysis.png 2>/dev/null | wc -l)
+            echo "   Generated $GAP_PLOT_COUNT gap analysis plots"
+        else
+            echo "⚠️  Warning: Failed to generate gap fraction plots"
+        fi
+    else
+        echo "❌ Error: No MSA alignments found in output/msa/dna_alignments"
+        echo "   Please ensure Step 2 (MSA creation) completed successfully"
+        exit 1
+    fi
+    
+    # Optional: Gene boundary metrics
+    if [ "$WITH_GENE_BOUNDARY" = true ] && [ -d "output/gene_boundary_analysis/msa/dna_alignments" ]; then
+        echo ""
+        echo "Calculating gene boundary analysis metrics..."
         
         python operon_pipeline.py create-summary \
             --msa-dir output/gene_boundary_analysis/msa \
@@ -306,12 +372,17 @@ if [ $START_STEP -le 4 ]; then
             echo "✅ Gene boundary metrics saved"
         fi
     fi
+    
+    echo ""
+    echo "NOTE: To generate conservation plots, run:"
+    echo "  cd ../06_diversity_analysis"
+    echo "  sbatch run_analysis.sh --plots"
 else
-    echo "⏭️  Skipping Step 4: Conservation plots"
+    echo "⏭️  Skipping Step 4: Conservation metrics"
 fi
 
 ########## Step 5: Generate comprehensive summary ##########
-if [ $START_STEP -le 5 ]; then
+if [ $START_STEP -le 5 ] && [ "$METRICS_ONLY" = false ]; then
     echo ""
     echo "Step 5: Generating comprehensive summary..."
     echo "==========================================="
@@ -413,8 +484,10 @@ echo ""
 echo "📁 Main output directory: output/"
 echo "   - Sequences: output/sequences/"
 echo "   - Alignments: output/msa/"
-echo "   - Plots: output/plots/"
 echo "   - Metrics: output/operon_conservation_metrics.csv"
+echo ""
+echo "📊 To generate conservation plots:"
+echo "   cd ../06_diversity_analysis && sbatch run_analysis.sh --plots"
 
 if [ "$WITH_GENE_BOUNDARY" = true ]; then
     echo ""

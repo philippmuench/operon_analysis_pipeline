@@ -486,6 +486,94 @@ def calculate_shannon_entropy(alignment_file: str) -> Tuple[List[float], Dict]:
     return conservation_scores, metadata
 
 
+def calculate_detailed_conservation_metrics(alignment_file: str) -> dict:
+    """
+    Calculate detailed conservation metrics matching core gene analysis format.
+    
+    Returns dict with conservation metrics including median, std, and position categories.
+    """
+    from Bio import AlignIO
+    from collections import Counter
+    
+    gene_name = os.path.basename(alignment_file).replace('_aligned.fasta', '')
+    
+    try:
+        alignment = AlignIO.read(alignment_file, "fasta")
+        n_sequences = len(alignment)
+        alignment_length = alignment.get_alignment_length()
+        
+        if n_sequences < 2:
+            return {
+                'gene': gene_name,
+                'error': 'Too few sequences',
+                'n_sequences': n_sequences
+            }
+        
+        # Calculate position-wise conservation scores
+        position_scores = []
+        gap_counts = []
+        
+        for pos in range(alignment_length):
+            column = alignment[:, pos]
+            
+            # Count characters (excluding gaps)
+            char_counts = Counter([c.upper() for c in column if c != '-'])
+            gap_count = column.count('-')
+            gap_counts.append(gap_count)
+            
+            if len(char_counts) == 0:
+                conservation_score = 0
+            else:
+                # Calculate Shannon entropy
+                total = sum(char_counts.values())
+                entropy = -sum((count/total) * np.log2(count/total) 
+                             for count in char_counts.values() if count > 0)
+                
+                # Convert entropy to conservation (max entropy for DNA = 2)
+                max_entropy = 2.0
+                conservation_score = 1 - (entropy / max_entropy)
+                conservation_score = max(0.0, min(1.0, conservation_score))
+            
+            position_scores.append(conservation_score)
+        
+        # Calculate overall metrics
+        mean_conservation = np.mean(position_scores)
+        median_conservation = np.median(position_scores)
+        std_conservation = np.std(position_scores)
+        
+        # Calculate percentage of highly conserved positions
+        highly_conserved = sum(1 for s in position_scores if s > 0.9) / len(position_scores)
+        moderately_conserved = sum(1 for s in position_scores if 0.5 <= s <= 0.9) / len(position_scores)
+        variable = sum(1 for s in position_scores if s < 0.5) / len(position_scores)
+        
+        # Gap statistics
+        mean_gaps = np.mean(gap_counts)
+        max_gaps = max(gap_counts)
+        positions_with_gaps = sum(1 for g in gap_counts if g > 0) / len(gap_counts)
+        
+        return {
+            'gene': gene_name,
+            'n_sequences': n_sequences,
+            'alignment_length': alignment_length,
+            'mean_conservation': mean_conservation,
+            'median_conservation': median_conservation,
+            'std_conservation': std_conservation,
+            'highly_conserved_pct': highly_conserved * 100,
+            'moderately_conserved_pct': moderately_conserved * 100,
+            'variable_pct': variable * 100,
+            'mean_gaps_per_position': mean_gaps,
+            'max_gaps_per_position': max_gaps,
+            'positions_with_gaps_pct': positions_with_gaps * 100
+        }
+        
+    except Exception as e:
+        return {
+            'gene': gene_name,
+            'error': str(e),
+            'n_sequences': 0
+        }
+
+
 def create_conservation_plots(msa_dir: str, output_dir: str, 
                             title_suffix: str = "") -> None:
     """
@@ -558,6 +646,139 @@ def create_conservation_plots(msa_dir: str, output_dir: str,
                 print(f"    Warning: Could not create logo for {gene_name}: {e}")
     
     print(f"✅ Conservation plots complete")
+
+
+def calculate_gap_fraction(alignment_file: str) -> Tuple[List[float], Dict]:
+    """
+    Calculate gap fraction for each position in an alignment.
+    
+    Returns:
+        Tuple of (gap_fractions, metadata_dict)
+    """
+    from Bio import AlignIO
+    
+    try:
+        alignment = AlignIO.read(alignment_file, "fasta")
+    except Exception as e:
+        print(f"Warning: Could not parse alignment file {alignment_file}: {e}")
+        return [], {}
+    
+    if len(alignment) == 0:
+        return [], {}
+    
+    n_sequences = len(alignment)
+    alignment_length = alignment.get_alignment_length()
+    gap_fractions = []
+    
+    for pos in range(alignment_length):
+        column = alignment[:, pos]
+        gap_count = column.count('-')
+        gap_fraction = gap_count / n_sequences if n_sequences > 0 else 0
+        gap_fractions.append(gap_fraction)
+    
+    # Calculate metadata
+    metadata = {
+        'num_sequences': n_sequences,
+        'alignment_length': alignment_length,
+        'mean_gap_fraction': np.mean(gap_fractions),
+        'max_gap_fraction': np.max(gap_fractions) if gap_fractions else 0,
+        'positions_with_gaps': sum(1 for g in gap_fractions if g > 0),
+        'positions_with_gaps_pct': (sum(1 for g in gap_fractions if g > 0) / len(gap_fractions) * 100) if gap_fractions else 0
+    }
+    
+    return gap_fractions, metadata
+
+
+def create_gap_plots(msa_dir: str, output_dir: str, title_suffix: str = "") -> None:
+    """
+    Create gap fraction plots for alignments.
+    
+    Args:
+        msa_dir: Directory containing alignment files
+        output_dir: Directory for output plots
+        title_suffix: Suffix for plot titles
+    """
+    print(f"\n{'='*60}")
+    print("Creating gap fraction plots")
+    print(f"{'='*60}")
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Find alignment files
+    align_files = sorted([f for f in os.listdir(msa_dir) 
+                         if f.endswith('_aligned.fasta') or f.endswith('.fasta')])
+    
+    if not align_files:
+        print(f"Warning: No alignment files found in {msa_dir}")
+        return
+    
+    for align_file in align_files:
+        align_path = os.path.join(msa_dir, align_file)
+        gene_name = align_file.replace('_aligned.fasta', '').replace('.fasta', '')
+        
+        print(f"  Processing {gene_name}...")
+        
+        # Calculate gap fractions
+        gap_fractions, metadata = calculate_gap_fraction(align_path)
+        
+        if not gap_fractions:
+            print(f"    Warning: No valid alignment for {gene_name}")
+            continue
+        
+        # Create gap fraction plot
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10), height_ratios=[1, 1])
+        positions = np.arange(len(gap_fractions))
+        
+        # Top panel: Gap fraction plot
+        ax1.plot(positions, gap_fractions, color='red', linewidth=1.5, alpha=0.8)
+        ax1.fill_between(positions, gap_fractions, alpha=0.3, color='red')
+        ax1.set_xlabel('Position', fontsize=12)
+        ax1.set_ylabel('Gap Fraction', fontsize=12)
+        ax1.set_title(f'{gene_name} Gap Distribution{" - " + title_suffix if title_suffix else ""}',
+                     fontsize=14, fontweight='bold')
+        ax1.set_ylim(0, 1.05)
+        ax1.grid(True, alpha=0.3)
+        
+        # Add horizontal lines for reference
+        ax1.axhline(y=0.5, color='gray', linestyle='--', alpha=0.5, label='50% gaps')
+        ax1.axhline(y=0.9, color='gray', linestyle=':', alpha=0.5, label='90% gaps')
+        
+        # Add metadata text
+        info_text = (f"Sequences: {metadata['num_sequences']:,}\n"
+                    f"Length: {metadata['alignment_length']:,} bp\n"
+                    f"Mean gap fraction: {metadata['mean_gap_fraction']:.3f}\n"
+                    f"Max gap fraction: {metadata['max_gap_fraction']:.3f}\n"
+                    f"Positions with gaps: {metadata['positions_with_gaps_pct']:.1f}%")
+        ax1.text(0.02, 0.98, info_text, transform=ax1.transAxes,
+                fontsize=10, verticalalignment='top',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+        ax1.legend(loc='upper right', fontsize=10)
+        
+        # Bottom panel: Histogram of gap fractions
+        # More efficient than conservation correlation for large alignments
+        ax2.hist(gap_fractions, bins=50, color='darkred', alpha=0.7, edgecolor='black')
+        ax2.set_xlabel('Gap Fraction', fontsize=12)
+        ax2.set_ylabel('Number of Positions', fontsize=12)
+        ax2.set_title(f'Gap Fraction Distribution for {gene_name}', fontsize=13, fontweight='bold')
+        ax2.set_xlim(-0.05, 1.05)
+        ax2.grid(True, alpha=0.3, axis='y')
+        
+        # Add statistics to the histogram
+        gap_stats_text = (f"Positions with no gaps: {sum(1 for g in gap_fractions if g == 0):,}\n"
+                         f"Positions with >50% gaps: {sum(1 for g in gap_fractions if g > 0.5):,}\n"
+                         f"Positions with >90% gaps: {sum(1 for g in gap_fractions if g > 0.9):,}")
+        ax2.text(0.98, 0.98, gap_stats_text, transform=ax2.transAxes,
+                fontsize=10, verticalalignment='top', horizontalalignment='right',
+                bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
+        
+        plt.tight_layout()
+        output_file = os.path.join(output_dir, f"{gene_name}_gap_fraction_analysis.png")
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+        plt.close()
+        
+        print(f"    Saved gap plot to {output_file}")
+    
+    print(f"✅ Gap fraction plots complete")
 
 
 def create_sequence_logo(alignment_file: str, gene_name: str,
@@ -663,6 +884,62 @@ def create_msa_summary(msa_dir: str, output_file: str,
         print(f"  Saved metrics for {len(results)} genes to {output_file}")
     
     print(f"✅ MSA summary complete")
+
+
+def create_detailed_conservation_summary(msa_dir: str, output_file: str) -> None:
+    """
+    Create detailed conservation metrics CSV matching core gene analysis format.
+    
+    Args:
+        msa_dir: Directory containing MSA subdirectories
+        output_file: Output CSV file path
+    """
+    print(f"\n{'='*60}")
+    print("Creating detailed conservation metrics")
+    print(f"{'='*60}")
+    
+    # Find DNA alignments
+    dna_dir = os.path.join(msa_dir, 'dna_alignments')
+    
+    if not os.path.exists(dna_dir):
+        print(f"Warning: DNA alignment directory not found: {dna_dir}")
+        return
+    
+    results = []
+    
+    align_files = sorted([f for f in os.listdir(dna_dir) 
+                         if f.endswith('_aligned.fasta') or f.endswith('.fasta')])
+    
+    for i, align_file in enumerate(align_files, 1):
+        align_path = os.path.join(dna_dir, align_file)
+        gene_name = align_file.replace('_aligned.fasta', '').replace('.fasta', '')
+        
+        print(f"  Processing {gene_name} ({i}/{len(align_files)})...")
+        
+        metrics = calculate_detailed_conservation_metrics(align_path)
+        
+        if 'error' not in metrics:
+            results.append(metrics)
+        else:
+            print(f"    Warning: {metrics.get('error', 'Unknown error')}")
+    
+    # Save to CSV
+    if results:
+        df = pd.DataFrame(results)
+        df = df.sort_values('mean_conservation', ascending=False)
+        df.to_csv(output_file, index=False)
+        
+        print(f"\n✅ Saved detailed metrics for {len(results)} genes to {output_file}")
+        
+        # Print summary
+        print("\nSummary Statistics:")
+        print(f"  Mean conservation: {df['mean_conservation'].mean():.4f} ± {df['mean_conservation'].std():.4f}")
+        print(f"  Highly conserved positions: {df['highly_conserved_pct'].mean():.1f}%")
+        print(f"  Moderately conserved: {df['moderately_conserved_pct'].mean():.1f}%")
+        print(f"  Variable positions: {df['variable_pct'].mean():.1f}%")
+        print(f"  Positions with gaps: {df['positions_with_gaps_pct'].mean():.1f}%")
+    else:
+        print("No successful alignments processed")
 
 
 # ============================================================================
@@ -812,7 +1089,9 @@ Commands:
   extract-noncoding   Extract non-coding sequences (promoters)
   create-msa          Create multiple sequence alignments
   create-plots        Create conservation plots
+  create-gap-plots    Create gap fraction plots
   create-summary      Create conservation metrics summary
+  create-detailed-summary  Create detailed conservation metrics (matching core gene format)
   
 Examples:
   %(prog)s extract-sequences --blast-dir ../03_blast_search/output/blast_results \\
@@ -885,6 +1164,16 @@ Examples:
     plots_parser.add_argument('--title-suffix', default='',
                              help='Suffix for plot titles')
     
+    # Create gap plots command
+    gap_plots_parser = subparsers.add_parser('create-gap-plots',
+                                            help='Create gap fraction plots')
+    gap_plots_parser.add_argument('--msa-dir', required=True,
+                                 help='Directory with alignment files')
+    gap_plots_parser.add_argument('--output-dir', required=True,
+                                 help='Output directory for plots')
+    gap_plots_parser.add_argument('--title-suffix', default='',
+                                 help='Suffix for plot titles')
+    
     # Create summary command
     summary_parser = subparsers.add_parser('create-summary',
                                           help='Create conservation summary')
@@ -894,6 +1183,14 @@ Examples:
                                help='Output CSV file')
     summary_parser.add_argument('--strategy-name', default='Primary Analysis',
                                help='Analysis strategy name')
+    
+    # Create detailed summary command
+    detailed_parser = subparsers.add_parser('create-detailed-summary',
+                                           help='Create detailed conservation metrics matching core gene format')
+    detailed_parser.add_argument('--msa-dir', required=True,
+                                help='Directory with MSA subdirectories')
+    detailed_parser.add_argument('--output-file', required=True,
+                                help='Output CSV file')
     
     args = parser.parse_args()
     
@@ -943,11 +1240,24 @@ Examples:
             title_suffix=args.title_suffix
         )
     
+    elif args.command == 'create-gap-plots':
+        create_gap_plots(
+            msa_dir=args.msa_dir,
+            output_dir=args.output_dir,
+            title_suffix=args.title_suffix
+        )
+    
     elif args.command == 'create-summary':
         create_msa_summary(
             msa_dir=args.msa_dir,
             output_file=args.output_file,
             strategy_name=args.strategy_name
+        )
+    
+    elif args.command == 'create-detailed-summary':
+        create_detailed_conservation_summary(
+            msa_dir=args.msa_dir,
+            output_file=args.output_file
         )
 
 
