@@ -29,13 +29,15 @@ Core Gene Analysis Statistics for Manuscript
 
 4. Multiple Sequence Alignments:
    Alignments created: 1,252
+   Average alignment length: 1079 positions
+   Average sequences per alignment: 8562
    Alignment software: MAFFT v7.490
    Algorithm selection: Automatic (--auto)
 
 5. Conservation Analysis:
-   Genes analyzed: 66
-   Mean conservation score: 0.940
-   Standard deviation: 0.090
+   Genes analyzed: 1,252
+   Mean conservation score: 0.931
+   Standard deviation: 0.107
 
    Conservation scoring method: Shannon entropy
    Score range: 0 (highly variable) to 1 (perfectly conserved)
@@ -49,7 +51,7 @@ Core genes (≥95% prevalence): 1,252
 Genes in 100% of genomes: 225
 Total core gene sequences extracted: ~10,700,092
 Multiple sequence alignments created: 1,252
-Mean conservation score: 0.940
+Mean conservation score: 0.931
 
 Methodology:
   - Core gene threshold: ≥95% prevalence

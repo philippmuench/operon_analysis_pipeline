@@ -472,8 +472,14 @@ def calculate_diversity(align_dir, output_dir, threads=None):
     df = pd.DataFrame(results)
     
     # Separate successful and failed
-    successful = df[~df['error'].notna()]
-    failed = df[df['error'].notna()]
+    # Check if 'error' column exists
+    if 'error' in df.columns:
+        successful = df[~df['error'].notna()]
+        failed = df[df['error'].notna()]
+    else:
+        # All successful - no error column exists
+        successful = df
+        failed = pd.DataFrame()
     
     print(f"\nProcessed {len(successful)} alignments successfully")
     if len(failed) > 0:
@@ -481,7 +487,11 @@ def calculate_diversity(align_dir, output_dir, threads=None):
     
     # Save results
     output_file = os.path.join(output_dir, 'core_gene_conservation_metrics.csv')
-    successful.to_csv(output_file, index=False)
+    if len(successful) > 0:
+        successful.to_csv(output_file, index=False)
+    else:
+        print("Warning: No successful alignments to save")
+        return pd.DataFrame()
     
     # Create summary statistics
     summary_file = os.path.join(output_dir, 'core_gene_conservation_summary.txt')
