@@ -728,10 +728,150 @@ def create_stratification_plots(output_dir: str) -> None:
         plt.close()
         print("  Saved: ptsA_start_codon_by_niche.png/pdf")
     
-    # 3. Country comparison - Enhanced visualizations
+    # 3. Create individual gene plots by country
+    summary_file = os.path.join(output_dir, "start_site_summary.tsv")
+    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+    
+    if Path(summary_file).exists() and Path(metadata_file).exists():
+        print("Creating individual gene plots by country...")
+        summary_df = pd.read_csv(summary_file, sep='\t')
+        metadata_df = pd.read_csv(metadata_file, sep='\t')
+        
+        # Merge with metadata
+        merged_df = summary_df.merge(metadata_df, left_on='genome_id', right_on='Genome_ID', how='left')
+        
+        # Get unique genes
+        genes = merged_df['gene'].unique()
+        
+        for gene in genes:
+            print(f"  Creating plot for {gene}...")
+            gene_df = merged_df[merged_df['gene'] == gene]
+            
+            # Calculate statistics by country
+            country_stats = []
+            for country in gene_df['Country'].dropna().unique():
+                country_data = gene_df[gene_df['Country'] == country]
+                total = len(country_data)
+                if total >= 5:  # Only include countries with at least 5 samples
+                    atg_count = len(country_data[country_data['start_codon'] == 'ATG'])
+                    gtg_count = len(country_data[country_data['start_codon'] == 'GTG'])
+                    ttg_count = len(country_data[country_data['start_codon'] == 'TTG'])
+                    
+                    country_stats.append({
+                        'Country': country,
+                        'Total': total,
+                        'ATG': atg_count,
+                        'GTG': gtg_count,
+                        'TTG': ttg_count,
+                        'ATG%': (atg_count/total)*100,
+                        'GTG%': (gtg_count/total)*100,
+                        'TTG%': (ttg_count/total)*100
+                    })
+            
+            if country_stats:
+                country_gene_df = pd.DataFrame(country_stats)
+                
+                # Save to file
+                gene_country_file = os.path.join(output_dir, f"{gene}_by_country.tsv")
+                country_gene_df.to_csv(gene_country_file, sep='\t', index=False)
+                
+                # Create visualization
+                fig = plt.figure(figsize=(14, 8))
+                
+                # Sort by total samples for better visualization
+                country_gene_df = country_gene_df.sort_values('Total', ascending=False).head(20)  # Top 20 countries
+                
+                # Subplot 1: Stacked bar chart
+                ax1 = plt.subplot(2, 2, 1)
+                x = range(len(country_gene_df))
+                ax1.bar(x, country_gene_df['ATG%'], label='ATG', color='#2E7D32', alpha=0.8)
+                ax1.bar(x, country_gene_df['GTG%'], bottom=country_gene_df['ATG%'], label='GTG', color='#1976D2', alpha=0.8)
+                ax1.bar(x, country_gene_df['TTG%'], bottom=country_gene_df['ATG%'] + country_gene_df['GTG%'], label='TTG', color='#D32F2F', alpha=0.8)
+                
+                ax1.set_xticks(x)
+                ax1.set_xticklabels(country_gene_df['Country'], rotation=45, ha='right', fontsize=8)
+                ax1.set_ylabel('Start Codon Usage (%)')
+                ax1.set_title(f'{gene}: Start Codon Distribution by Country', fontsize=11, fontweight='bold')
+                ax1.legend(loc='upper right', fontsize=9)
+                ax1.set_ylim(0, 105)
+                
+                # Add sample sizes
+                for i, (idx, row) in enumerate(country_gene_df.iterrows()):
+                    ax1.text(i, 101, f"n={row['Total']}", ha='center', fontsize=6, color='gray')
+                
+                # Subplot 2: TTG usage focus
+                ax2 = plt.subplot(2, 2, 2)
+                ttg_sorted = country_gene_df.sort_values('TTG%', ascending=False)
+                x2 = range(len(ttg_sorted))
+                
+                colors = ['#D32F2F' if ttg > 15 else '#FFA726' if ttg > 10 else '#66BB6A' 
+                          for ttg in ttg_sorted['TTG%']]
+                
+                ax2.bar(x2, ttg_sorted['TTG%'], color=colors, alpha=0.7)
+                ax2.set_xticks(x2)
+                ax2.set_xticklabels(ttg_sorted['Country'], rotation=45, ha='right', fontsize=8)
+                ax2.set_ylabel('TTG Usage (%)')
+                ax2.set_title(f'{gene}: TTG Usage by Country (Sorted)', fontsize=11, fontweight='bold')
+                
+                # Add gene-specific average line
+                overall_ttg = (gene_df['start_codon'] == 'TTG').mean() * 100
+                ax2.axhline(y=overall_ttg, color='gray', linestyle='--', alpha=0.5, label=f'Gene avg ({overall_ttg:.1f}%)')
+                ax2.legend(fontsize=8)
+                
+                # Subplot 3: Sample size vs TTG scatter
+                ax3 = plt.subplot(2, 2, 3)
+                scatter = ax3.scatter(country_gene_df['Total'], country_gene_df['TTG%'], 
+                           s=80, alpha=0.6, c=country_gene_df['TTG%'], cmap='RdYlGn_r')
+                
+                # Add labels for high TTG or large sample countries
+                for idx, row in country_gene_df.iterrows():
+                    if row['TTG%'] > 20 or row['Total'] > 500:
+                        ax3.annotate(row['Country'], (row['Total'], row['TTG%']), 
+                                   fontsize=7, alpha=0.7)
+                
+                ax3.set_xlabel('Sample Size (n)')
+                ax3.set_ylabel('TTG Usage (%)')
+                ax3.set_title(f'{gene}: Sample Size vs TTG Usage', fontsize=11, fontweight='bold')
+                ax3.axhline(y=overall_ttg, color='gray', linestyle='--', alpha=0.5)
+                ax3.grid(True, alpha=0.3)
+                
+                # Subplot 4: Comparison of top countries
+                ax4 = plt.subplot(2, 2, 4)
+                top_countries = country_gene_df.nlargest(8, 'Total')
+                x4 = np.arange(len(top_countries))
+                width = 0.25
+                
+                ax4.bar(x4 - width, top_countries['ATG%'], width, label='ATG', color='#2E7D32', alpha=0.8)
+                ax4.bar(x4, top_countries['GTG%'], width, label='GTG', color='#1976D2', alpha=0.8)
+                ax4.bar(x4 + width, top_countries['TTG%'], width, label='TTG', color='#D32F2F', alpha=0.8)
+                
+                ax4.set_xticks(x4)
+                ax4.set_xticklabels(top_countries['Country'], rotation=45, ha='right', fontsize=8)
+                ax4.set_ylabel('Usage (%)')
+                ax4.set_title(f'{gene}: Top 8 Countries by Sample Size', fontsize=11, fontweight='bold')
+                ax4.legend(fontsize=8)
+                
+                # Overall title with gene statistics
+                total_genomes = len(gene_df)
+                atg_pct = (gene_df['start_codon'] == 'ATG').mean() * 100
+                gtg_pct = (gene_df['start_codon'] == 'GTG').mean() * 100
+                ttg_pct = (gene_df['start_codon'] == 'TTG').mean() * 100
+                
+                plt.suptitle(f'{gene.upper()} Start Codon Analysis\n'
+                           f'Total: {total_genomes} genomes | ATG: {atg_pct:.1f}% | GTG: {gtg_pct:.1f}% | TTG: {ttg_pct:.1f}%',
+                           fontsize=12, fontweight='bold', y=1.02)
+                
+                plt.tight_layout()
+                plot_file = os.path.join(plots_dir, f'{gene}_by_country.png')
+                plt.savefig(plot_file, dpi=150, bbox_inches='tight')
+                plt.savefig(plot_file.replace('.png', '.pdf'), bbox_inches='tight')
+                plt.close()
+                print(f"    Saved: {gene}_by_country.png/pdf")
+    
+    # 4. Overall country comparison (all genes combined)
     country_file = os.path.join(output_dir, "start_codon_by_country.tsv")
     if Path(country_file).exists():
-        print("Creating Country comparison plots...")
+        print("Creating overall Country comparison plots...")
         country_df = pd.read_csv(country_file, sep='\t')
         
         # Create figure with multiple subplots
@@ -820,10 +960,7 @@ def create_stratification_plots(output_dir: str) -> None:
         plt.close()
         print("  Saved: start_codon_by_country_detailed.png/pdf")
     
-    # 4. Heatmap comparing all genes across source niches
-    summary_file = os.path.join(output_dir, "start_site_summary.tsv")
-    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
-    
+    # 5. Heatmap comparing all genes across source niches
     if Path(summary_file).exists() and Path(metadata_file).exists():
         print("Creating gene comparison heatmap...")
         
