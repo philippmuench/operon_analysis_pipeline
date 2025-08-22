@@ -1,84 +1,129 @@
 # Step 7: dN/dS and Substitution Analysis
 
-This directory contains scripts for analyzing selection pressure and substitution patterns in the operon genes.
+This directory contains a consolidated pipeline for analyzing selection pressure and substitution patterns in operon and core genes.
 
 ## Overview
 
-This step performs specialized analysis of:
+The consolidated pipeline (`dnds_pipeline.py`) performs comprehensive analysis of:
 - **dN/dS ratios** (ratio of non-synonymous to synonymous substitutions)
-- **Selection pressure** (purifying vs positive selection)
-- **Substitution patterns** (transitions vs transversions)
-- **Codon usage** and evolutionary constraints
+- **SNP types** (synonymous, non-synonymous)
+- **Selection pressure** (purifying, neutral, or positive selection)
+- **Sequence variation** (variable sites, parsimony informative sites)
+- **Statistical comparisons** between operon and core genes
+
+## Quick Start
+
+```bash
+# Run the consolidated pipeline via SLURM
+sbatch run_dnds_analysis.sh
+
+# Or run directly with custom parameters
+python dnds_pipeline.py \
+    --operon-dir ../05_operon_assembly_extraction/output/msa/dna_alignments \
+    --core-dir ../04_core_gene_analysis/output/core_gene_alignments \
+    --output-dir output \
+    --threads 20
+```
 
 ## Input Data
 
-Uses data from previous pipeline steps:
-- Operon MSAs: `../05_operon_assembly_extraction/output/msa/dna_alignments/`
-- Core gene MSAs: `../04_core_gene_analysis/output/core_gene_alignments/`
-- BLAST results (optional context): `../03_blast_search/output/`
+The pipeline automatically detects and uses MSAs from previous steps:
 
-## Main Scripts
+1. **Operon Gene MSAs** (from Step 05):
+   - Primary: `../05_operon_assembly_extraction/output/msa/dna_alignments/`
+   - Alternative paths checked automatically
 
-### **dN/dS Analysis Scripts**
-- `analyze_dnds.py` - Calculate dN/dS ratios for gene alignments
-- `compare_dnds_results.py` - Compare dN/dS across different genes
-- `run_dnds_analysis.sh` - Main dN/dS analysis pipeline
+2. **Core Gene MSAs** (from Step 04):
+   - Directory: `../04_core_gene_analysis/output/core_gene_alignments/`
+   - All available alignments are processed
 
-### **Substitution Analysis Scripts**
-- `analyze_operon_substitutions.py` - Analyze substitution patterns in operons
-- `analyze_substitution_types.py` - Classify substitution types (Ti/Tv)
-- `compare_substitutions_all.py` - Comprehensive substitution comparison
-- `submit_substitution_comparison.sh` - Submit substitution analysis job
+## Main Components
 
-## Usage
+### Consolidated Pipeline: `dnds_pipeline.py`
+Single comprehensive script that:
+- Processes all alignments in parallel
+- Calculates dN/dS ratios and substitution statistics
+- Generates publication-ready visualizations
+- Creates detailed reports and summaries
+- Performs statistical comparisons
 
-### **Run dN/dS Analysis**
-```bash
-# Submit dN/dS analysis job
-sbatch run_dnds_analysis.sh
+### SLURM Script: `run_dnds_analysis.sh`
+Enhanced submission script that:
+- Validates input directories
+- Checks environment dependencies
+- Provides detailed progress reporting
+- Shows summary statistics upon completion
+
+## Output Structure
+
+```
+output/
+├── tables/
+│   ├── operon_dnds_analysis.csv      # Detailed operon gene metrics
+│   └── core_genes_dnds_analysis.csv  # Detailed core gene metrics
+├── plots/
+│   ├── dnds_analysis_summary.png     # Comprehensive 6-panel figure
+│   └── dnds_analysis_summary.pdf     # PDF version
+├── dnds_summary_report.txt           # Comprehensive text report
+├── dnds_summary_statistics.txt       # Quick summary statistics
+└── dnds_pipeline.log                  # Processing log
 ```
 
-### **Run Substitution Analysis**
-```bash
-# Submit substitution comparison job
-sbatch submit_substitution_comparison.sh
-```
+## Visualizations
 
-## Output Files
+The pipeline generates a comprehensive 6-panel figure including:
+1. **dN/dS Distribution**: Histogram comparison between gene sets
+2. **Substitution Types**: Bar plot of synonymous vs non-synonymous
+3. **Selection Categories**: Genes under different selection pressures
+4. **Variable Sites**: Correlation with alignment length
+5. **Gap Percentages**: Distribution of alignment gaps
+6. **Statistical Summary**: Key metrics and test results
 
-Results are typically saved to an `output/` directory within this folder:
+## Key Metrics
 
-### dN/dS Analysis Results
-- `dnds_results.csv` - dN/dS ratios for each gene
-- `selection_summary.txt` - Selection pressure classification
-- `dnds_comparison_plots.png` - Comparative visualizations
+### dN/dS Ratio Categories
+- **< 0.1**: Strong purifying selection
+- **0.1-0.5**: Purifying selection
+- **0.5-1.0**: Weak purifying selection
+- **≈ 1.0**: Neutral evolution
+- **> 1.0**: Positive selection
 
-### Substitution Analysis Results
-- `substitution_patterns.csv` - Detailed substitution classifications
-- `ti_tv_ratios.csv` - Transition/transversion ratios
-- `substitution_summary_plots.png` - Pattern visualizations
+### Additional Metrics
+- **Variable sites**: Positions with sequence variation
+- **Parsimony informative**: Sites useful for phylogeny
+- **Singleton sites**: Unique mutations
+- **Gap percentage**: Alignment quality indicator
 
-## Key Metrics Explained
+## Statistical Analysis
 
-### dN/dS Ratio
-- **dN/dS < 0.5**: Strong purifying selection (negative selection)
-- **dN/dS ≈ 1.0**: Neutral evolution
-- **dN/dS > 1.0**: Positive selection
+The pipeline performs:
+- **Mann-Whitney U test**: Non-parametric comparison of dN/dS distributions
+- **Effect size**: Rank-biserial correlation
+- **Descriptive statistics**: Mean, median, quartiles
+- **Selection pressure classification**: Categorization by dN/dS ranges
 
-### Ti/Tv Ratio
-- **Expected ~2.0**: For neutral evolution
-- **Higher values**: Indicate selection constraints
-- **Lower values**: May indicate relaxed selection
+## Resource Requirements
 
-## Prerequisites
-
-Before running these analyses, ensure you have completed:
-1. Step 3: BLAST search
-2. Step 5: Operon assembly-based extraction and MSA creation
-3. Step 4: Core gene analysis (including MSAs)
+- **Time**: 2 hours
+- **Memory**: 32GB
+- **CPUs**: 20
+- **Partition**: cpu
 
 ## Dependencies
 
-- Python 3.x with BioPython
-- Multiple sequence alignments from Step 5
-- BLAST results from Step 3
+Required Python packages:
+- BioPython (≥1.79)
+- pandas (≥1.3)
+- numpy (≥1.21)
+- matplotlib (≥3.4)
+- seaborn (≥0.11)
+- scipy (≥1.7)
+
+## Troubleshooting
+
+If the pipeline fails:
+1. Check input directories exist and contain alignments
+2. Review the pipeline log: `output/dnds_pipeline.log`
+3. Check SLURM error logs: `dnds_pipeline_*.err`
+4. Verify environment activation and package installation
+5. Ensure sufficient memory for large datasets
