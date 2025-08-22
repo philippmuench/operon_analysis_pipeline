@@ -8,6 +8,9 @@
 *.out
 *.err
 
+# Specifically ignore the metadata file with sensitive information
+00_annotation/8587_Efs_metadata_ASbarcode.txt
+
 # Allow specific visualization and summary files
 !*/output/mappings/*/*/plots/*.png
 !*/output/mappings/*/*/enhanced_plots/*.png
