@@ -65,9 +65,18 @@ A striking finding emerged from metadata stratification analysis: laboratory-ada
 
 Additionally, 86.9% of all operon genes possess potential upstream alternative start sites, with 72.3% of all genes having upstream starts associated with ribosome binding sites (RBS). The mean distance to these upstream starts is 30 nucleotides (median 24 nt, max 111 nt). Interestingly, while most genes show near-universal presence of alternative starts (97-100%), *ptsA* shows the lowest frequency (13%), consistent with its unique TTG usage pattern. The high prevalence of alternative upstream starts with RBS motifs suggests either widespread translational flexibility or systematic annotation challenges in identifying true translation initiation sites.
 
+## Selection Pressure Analysis (pN/pS)
+
+We quantified selection pressure by calculating the ratio of non-synonymous to synonymous substitutions (pN/pS) at variable codon positions. For each gene alignment, we classified nucleotide changes as synonymous or non-synonymous, then normalized the pN/pS ratio by the expected neutral ratio (default 2.5) to account for the genetic code's inherent bias, yielding npN/pS values where <1 indicates purifying selection and >1 indicates relaxed/positive selection.
+
+Analysis of 1,428 core genes revealed a broad selection spectrum (npN/pS: 0.01-100+). Essential genes (ribosomal proteins *tuf*, *rpsZ*; DNA repair factor *recA*) showed strong purifying selection (npN/pS < 0.1), while metabolic enzymes and transporters showed relaxed selection (npN/pS > 2). The seven operon genes displayed intermediate selection (npN/pS: 0.3-1.0, mean 0.62), with PTS transport components (*ptsA-D*: 0.3-0.5) under stronger constraint than enzymatic components (*frpC*, *glpC*: 0.7-0.9). Variable site counts ranged from 20-80 synonymous and 20-60 non-synonymous sites per operon gene, moderate compared to core genes (0-300+ sites).
+
+Spatial mapping of variation revealed clustered distribution along coding sequences, with synonymous changes predominating (60-70% of variable positions) and mixed syn/nonsyn positions rare (<5%). This pattern indicates the operon maintains balanced selection pressure across all components, functioning as an integrated metabolic module with conserved protein interactions yet sufficient flexibility for adaptive evolution.
+
 ## Figures
 
 ### Figure 1: Conservation Ranking of Operon Genes
 **File:** 06_diversity_analysis/output/conservation_ranking_bars.pdf
 
 Comparative conservation analysis of fructoselysine/glucoselysine operon genes relative to 1,251 core genes in *Enterococcus faecalis*. The bar chart displays the conservation ranking of each operon gene within the core gene distribution, with genes ordered by their conservation scores. All seven operon genes (highlighted in distinct colors) rank within the top 27.8% of core genes for sequence conservation, with PTS system components (*ptsB*, *ptsA*, *ptsC*, *ptsD*) occupying positions in the top 200 most conserved genes. Conservation scores are calculated based on Shannon entropy across multiple sequence alignments, with values ranging from 0 (highly variable) to 1 (perfectly conserved). The exceptionally high conservation of operon genes (99.38-99.90%) despite their non-core status suggests strong purifying selection maintaining functional integrity when the operon is present. Gray bars represent the distribution of all 1,251 core genes, providing context for the relative conservation levels of the operon components.
+
