@@ -334,18 +334,19 @@ class BlastPipeline:
             self.logger.debug(f"Running blastn_noncoding for {genome_name}")
             subprocess.run(cmd, check=True)
         
-    def process_blast_results(self, test_mode: bool = False):
+    def process_blast_results(self):
         """Process BLAST results to identify genomes with complete operons."""
         self.logger.info("Processing BLAST results...")
         
-        blast_dir = self.blast_dirs['coding_protein']
         all_results = []
         
-        # Get all unique genome IDs
+        # Get all unique genome IDs from all BLAST modes
+        genome_ids = set()
+        
+        # Check coding_protein directory
+        blast_dir = self.blast_dirs['coding_protein']
         gene_files = list(blast_dir.glob('*_genes_blast.txt'))
         noncoding_files = list(blast_dir.glob('*_noncoding_blast.txt'))
-        
-        genome_ids = set()
         for f in gene_files:
             genome_id = f.stem.replace('_genes_blast', '')
             genome_ids.add(genome_id)
@@ -353,16 +354,30 @@ class BlastPipeline:
             genome_id = f.stem.replace('_noncoding_blast', '')
             genome_ids.add(genome_id)
             
+        # Check coding_nt directory
+        nt_dir = self.blast_dirs['coding_nt']
+        if nt_dir.exists():
+            for f in nt_dir.glob('*_genes_blast.txt'):
+                genome_id = f.stem.replace('_genes_blast', '')
+                genome_ids.add(genome_id)
+                
+        # Check prokka_variants directory
+        variants_dir = self.blast_dirs['prokka_variants']
+        if variants_dir.exists():
+            for f in variants_dir.glob('*_blast.txt'):
+                genome_id = f.stem.replace('_blast', '')
+                genome_ids.add(genome_id)
+            
         genome_ids = sorted(list(genome_ids))
         
-        if test_mode:
-            genome_ids = genome_ids[:50]
-            self.logger.info(f"TEST MODE: Processing only first 50 genomes")
             
         self.logger.info(f"Found {len(genome_ids)} genomes to process")
         
+        # Track high-quality hits statistics
+        hq_stats = {'total_hits': 0, 'hq_hits': 0}
+        
         for genome_id in genome_ids:
-            # Process gene BLAST results
+            # Process tblastn results (coding_protein)
             gene_file = blast_dir / f'{genome_id}_genes_blast.txt'
             if gene_file.exists() and gene_file.stat().st_size > 0:
                 df = pd.read_csv(gene_file, sep='\t', header=None,
@@ -373,6 +388,25 @@ class BlastPipeline:
                 best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first()
                 best_hits['genome_id'] = genome_id
                 best_hits['search_type'] = 'tblastn'
+                # Add HQ flag
+                best_hits['is_hq'] = (best_hits['pident'] >= 90) & (best_hits['qcovs'] >= 80)
+                hq_stats['total_hits'] += len(best_hits)
+                hq_stats['hq_hits'] += best_hits['is_hq'].sum()
+                all_results.append(best_hits)
+                
+            # Process blastn results (coding_nt)
+            nt_file = nt_dir / f'{genome_id}_genes_blast.txt'
+            if nt_file.exists() and nt_file.stat().st_size > 0:
+                df = pd.read_csv(nt_file, sep='\t', header=None,
+                               names=['qseqid', 'sseqid', 'pident', 'length', 
+                                     'mismatch', 'gapopen', 'qstart', 'qend',
+                                     'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
+                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first()
+                best_hits['genome_id'] = genome_id
+                best_hits['search_type'] = 'blastn_nt'
+                best_hits['is_hq'] = (best_hits['pident'] >= 90) & (best_hits['qcovs'] >= 80)
+                hq_stats['total_hits'] += len(best_hits)
+                hq_stats['hq_hits'] += best_hits['is_hq'].sum()
                 all_results.append(best_hits)
                 
             # Process non-coding BLAST results
@@ -384,13 +418,21 @@ class BlastPipeline:
                                      'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
                 best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first()
                 best_hits['genome_id'] = genome_id
-                best_hits['search_type'] = 'blastn'
+                best_hits['search_type'] = 'blastn_noncoding'
+                best_hits['is_hq'] = (best_hits['pident'] >= 90) & (best_hits['qcovs'] >= 80)
+                hq_stats['total_hits'] += len(best_hits)
+                hq_stats['hq_hits'] += best_hits['is_hq'].sum()
                 all_results.append(best_hits)
                 
         if all_results:
             combined_df = pd.concat(all_results)
             combined_df.to_csv(self.output_dir / 'all_blast_hits.csv')
             self.logger.info(f"Saved combined results to {self.output_dir / 'all_blast_hits.csv'}")
+            
+            # Log HQ statistics
+            if hq_stats['total_hits'] > 0:
+                hq_pct = (hq_stats['hq_hits'] / hq_stats['total_hits']) * 100
+                self.logger.info(f"High-quality hits (≥90% identity, ≥80% coverage): {hq_stats['hq_hits']}/{hq_stats['total_hits']} ({hq_pct:.1f}%)")
             
             # Generate summary
             self.generate_summary(combined_df)
@@ -405,12 +447,17 @@ class BlastPipeline:
         summary = []
         for genome_id in df['genome_id'].unique():
             genome_df = df[df['genome_id'] == genome_id]
-            gene_hits = genome_df[genome_df['search_type'] == 'tblastn']['qseqid'].nunique()
-            noncoding_hits = genome_df[genome_df['search_type'] == 'blastn']['qseqid'].nunique()
+            # Count hits from different search types
+            gene_hits = genome_df[genome_df['search_type'].isin(['tblastn', 'blastn_nt'])]['qseqid'].nunique()
+            noncoding_hits = genome_df[genome_df['search_type'] == 'blastn_noncoding']['qseqid'].nunique()
+            # Count HQ hits
+            hq_gene_hits = genome_df[(genome_df['search_type'].isin(['tblastn', 'blastn_nt'])) & 
+                                    (genome_df['is_hq'] == True)]['qseqid'].nunique()
             
             summary.append({
                 'genome_id': genome_id,
                 'gene_hits': gene_hits,
+                'gene_hits_hq': hq_gene_hits,
                 'noncoding_hits': noncoding_hits,
                 'total_hits': gene_hits + noncoding_hits
             })
@@ -423,36 +470,40 @@ class BlastPipeline:
         self.logger.info("\n=== BLAST Summary Statistics ===")
         self.logger.info(f"Total genomes analyzed: {len(summary_df)}")
         self.logger.info(f"Genomes with complete operon (7 genes): {len(summary_df[summary_df['gene_hits'] == 7])}")
+        self.logger.info(f"Genomes with complete HQ operon (7 genes, ≥90% identity, ≥80% coverage): {len(summary_df[summary_df['gene_hits_hq'] == 7])}")
         self.logger.info(f"Genomes with ≥6 genes: {len(summary_df[summary_df['gene_hits'] >= 6])}")
         self.logger.info(f"Genomes with ≥5 genes: {len(summary_df[summary_df['gene_hits'] >= 5])}")
         self.logger.info(f"Genomes with promoter hits: {len(summary_df[summary_df['noncoding_hits'] > 0])}")
         
-    def create_blast_overview(self, test_mode: bool = False):
+    def create_blast_overview(self):
         """Create overview of BLAST results showing prevalence of each operon component."""
         self.logger.info("Creating BLAST overview...")
         
-        blast_dir = self.blast_dirs['coding_protein']
         all_hits = []
+        genome_ids = set()
         
-        # Get all unique genome IDs
+        # Get all unique genome IDs from all BLAST modes
+        blast_dir = self.blast_dirs['coding_protein']
         gene_files = list(blast_dir.glob('*_genes_blast.txt'))
         noncoding_files = list(blast_dir.glob('*_noncoding_blast.txt'))
-        
-        genome_ids = set()
         for f in gene_files:
             genome_id = f.stem.replace('_genes_blast', '')
             genome_ids.add(genome_id)
             
+        # Check coding_nt directory
+        nt_dir = self.blast_dirs['coding_nt']
+        if nt_dir.exists():
+            for f in nt_dir.glob('*_genes_blast.txt'):
+                genome_id = f.stem.replace('_genes_blast', '')
+                genome_ids.add(genome_id)
+                
         genome_ids = sorted(list(genome_ids))
         
-        if test_mode:
-            genome_ids = genome_ids[:50]
-            self.logger.info(f"TEST MODE: Processing only first 50 genomes")
             
         self.logger.info(f"Processing {len(genome_ids)} genomes...")
         
         for genome_id in genome_ids:
-            # Process gene BLAST results
+            # Process tblastn results
             gene_file = blast_dir / f'{genome_id}_genes_blast.txt'
             if gene_file.exists() and gene_file.stat().st_size > 0:
                 df = pd.read_csv(gene_file, sep='\t', header=None,
@@ -461,6 +512,19 @@ class BlastPipeline:
                                      'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
                 df['genome_id'] = genome_id
                 df['search_type'] = 'tblastn'
+                df['is_hq'] = (df['pident'] >= 90) & (df['qcovs'] >= 80)
+                all_hits.append(df)
+                
+            # Process blastn_nt results
+            nt_file = nt_dir / f'{genome_id}_genes_blast.txt'
+            if nt_file.exists() and nt_file.stat().st_size > 0:
+                df = pd.read_csv(nt_file, sep='\t', header=None,
+                               names=['qseqid', 'sseqid', 'pident', 'length', 
+                                     'mismatch', 'gapopen', 'qstart', 'qend',
+                                     'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
+                df['genome_id'] = genome_id
+                df['search_type'] = 'blastn_nt'
+                df['is_hq'] = (df['pident'] >= 90) & (df['qcovs'] >= 80)
                 all_hits.append(df)
                 
             # Process non-coding BLAST results
@@ -471,7 +535,8 @@ class BlastPipeline:
                                      'mismatch', 'gapopen', 'qstart', 'qend',
                                      'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
                 df['genome_id'] = genome_id
-                df['search_type'] = 'blastn'
+                df['search_type'] = 'blastn_noncoding'
+                df['is_hq'] = (df['pident'] >= 90) & (df['qcovs'] >= 80)
                 all_hits.append(df)
                 
         if not all_hits:
@@ -481,12 +546,23 @@ class BlastPipeline:
         # Combine all hits
         all_hits_df = pd.concat(all_hits, ignore_index=True)
         
-        # Gene prevalence analysis
-        gene_prevalence = all_hits_df[all_hits_df['search_type'] == 'tblastn'].groupby('qseqid')['genome_id'].nunique()
+        # Gene prevalence analysis (combine tblastn and blastn_nt results)
+        coding_hits = all_hits_df[all_hits_df['search_type'].isin(['tblastn', 'blastn_nt'])]
+        gene_prevalence = coding_hits.groupby('qseqid')['genome_id'].nunique()
+        
+        # Also calculate HQ prevalence
+        hq_coding_hits = coding_hits[coding_hits['is_hq'] == True]
+        gene_prevalence_hq = hq_coding_hits.groupby('qseqid')['genome_id'].nunique()
+        
+        # Align HQ counts with gene prevalence index
+        hq_counts = gene_prevalence_hq.reindex(gene_prevalence.index).fillna(0).astype(int)
+        
         gene_prevalence_df = pd.DataFrame({
             'gene': gene_prevalence.index,
             'genomes_with_hit': gene_prevalence.values,
-            'prevalence_percent': (gene_prevalence.values / len(genome_ids)) * 100
+            'genomes_with_hq_hit': hq_counts.values,
+            'prevalence_percent': (gene_prevalence.values / len(genome_ids)) * 100,
+            'hq_prevalence_percent': (hq_counts.values / len(genome_ids)) * 100
         })
         gene_prevalence_df = gene_prevalence_df.sort_values('prevalence_percent', ascending=False)
         
@@ -496,7 +572,7 @@ class BlastPipeline:
         
         self.logger.info("\n=== Gene Prevalence ===")
         for _, row in gene_prevalence_df.iterrows():
-            self.logger.info(f"{row['gene']}: {row['genomes_with_hit']}/{len(genome_ids)} ({row['prevalence_percent']:.1f}%)")
+            self.logger.info(f"{row['gene']}: {row['genomes_with_hit']}/{len(genome_ids)} ({row['prevalence_percent']:.1f}%) | HQ: {row['genomes_with_hq_hit']}/{len(genome_ids)} ({row['hq_prevalence_percent']:.1f}%)")
             
         return all_hits_df
         
@@ -528,7 +604,12 @@ class BlastPipeline:
             f.write("-" * 40 + "\n")
             for mode, dir_path in self.blast_dirs.items():
                 if dir_path.exists():
-                    file_count = len(list(dir_path.glob('*.txt')))
+                    if mode == 'coding_protein':
+                        file_count = len(list(dir_path.glob('*_genes_blast.txt')))
+                    elif mode == 'noncoding':
+                        file_count = len(list(dir_path.glob('*_noncoding_blast.txt')))
+                    else:
+                        file_count = len(list(dir_path.glob('*.txt')))
                     f.write(f"{mode}: {file_count} result files\n")
                 else:
                     f.write(f"{mode}: Directory not found\n")
@@ -542,6 +623,8 @@ class BlastPipeline:
                 f.write("-" * 40 + "\n")
                 f.write(f"Total genomes analyzed: {len(summary_df)}\n")
                 f.write(f"Genomes with complete operon (7 genes): {len(summary_df[summary_df['gene_hits'] == 7])}\n")
+                if 'gene_hits_hq' in summary_df.columns:
+                    f.write(f"Genomes with complete HQ operon (7 genes, ≥90% identity, ≥80% coverage): {len(summary_df[summary_df['gene_hits_hq'] == 7])}\n")
                 f.write(f"Genomes with ≥6 genes: {len(summary_df[summary_df['gene_hits'] >= 6])}\n")
                 f.write(f"Genomes with ≥5 genes: {len(summary_df[summary_df['gene_hits'] >= 5])}\n")
                 f.write(f"Genomes with any hits: {len(summary_df[summary_df['total_hits'] > 0])}\n")
@@ -567,7 +650,6 @@ def main():
     parser.add_argument('--batch-id', type=int, help='Batch ID for SLURM array job')
     parser.add_argument('--batch-size', type=int, default=100, help='Number of genomes per batch')
     parser.add_argument('--threads', type=int, default=60, help='Number of threads for BLAST')
-    parser.add_argument('--test', action='store_true', help='Test mode: process only 50 genomes')
     parser.add_argument('--prokka-dir', default='../01_prokka_annotation/output/prokka_results',
                        help='Directory containing Prokka results')
     parser.add_argument('--assembly-dir', default='../../Efs_assemblies',
@@ -597,10 +679,10 @@ def main():
         pipeline.run_blast_search(modes=args.blast_modes)
         
     if args.mode in ['process', 'all']:
-        pipeline.process_blast_results(test_mode=args.test)
+        pipeline.process_blast_results()
         
     if args.mode in ['overview', 'all']:
-        pipeline.create_blast_overview(test_mode=args.test)
+        pipeline.create_blast_overview()
         
     if args.mode in ['stats', 'all']:
         pipeline.generate_manuscript_stats()

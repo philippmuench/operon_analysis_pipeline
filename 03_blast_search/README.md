@@ -4,7 +4,7 @@ This directory contains a unified pipeline for searching operon genes across all
 
 ## Pipeline Overview
 
-The unified `blast_pipeline.py` combines BLAST search, result processing, and statistics generation into a single, efficient workflow. It's executed through `run_pipeline.sh` which handles SLURM job submission and mode selection.
+The `blast_pipeline.py` combines BLAST search, result processing, and statistics generation. It's executed through `run_pipeline.sh` which handles SLURM job submission and mode selection.
 
 ## Input
 - **Query proteins**: `../02_reference_operon_extraction/output/operon_genes_protein.fasta` (for tblastn)
@@ -19,11 +19,12 @@ The unified `blast_pipeline.py` combines BLAST search, result processing, and st
 - `output/blast_results_nt/*_genes_blast.txt` - BLAST results for coding genes (blastn against assemblies)
 - `output/blast_results_prokka_variants/*_blast.txt` - BLAST results for Prokka gene variants (blastn of Prokka genes vs reference)
 - `output/blast_results/*_noncoding_blast.txt` - BLAST results for non-coding sequences (blastn against assemblies)
-- Summary/compiled outputs are written to `../04_core_gene_analysis/output/`:
-  - `operon_presence_summary.csv` - Summary of operon presence across genomes
-  - `operon_presence_absence_matrix.csv` - Presence/absence matrix
-  - `component_prevalence.csv`, `identity_statistics.csv` - Overview stats
-  - `all_blast_hits_complete.csv` - All parsed BLAST hits
+- Summary outputs in `output/`:
+  - `all_blast_hits.csv` - Combined BLAST results with best hits per query per genome
+  - `operon_summary.csv` - Summary of operon gene hits per genome
+  - `gene_prevalence.csv` - Gene prevalence statistics across all genomes
+  - `all_blast_hits_detailed.csv` - Detailed BLAST hits from overview analysis
+  - `manuscript_stats.txt` - Comprehensive statistics for manuscript
 
 ## Usage
 
@@ -34,16 +35,16 @@ The unified `blast_pipeline.py` combines BLAST search, result processing, and st
 sbatch --array=1-86 run_pipeline.sh
 
 # Step 2: After all array jobs complete, process results
-sbatch --array=1 run_pipeline.sh process
+sbatch run_pipeline.sh process
 
 # Step 3: Generate overview statistics
-sbatch --array=1 run_pipeline.sh overview
+sbatch run_pipeline.sh overview
 
 # Step 4: Generate manuscript statistics
-sbatch --array=1 run_pipeline.sh stats
+sbatch run_pipeline.sh stats
 
 # Alternative: Run steps 2-4 together after BLAST search completes
-sbatch --array=1 run_pipeline.sh all
+sbatch run_pipeline.sh all
 ```
 
 ### Pipeline Modes
@@ -53,7 +54,6 @@ sbatch --array=1 run_pipeline.sh all
 - **overview**: Create comprehensive BLAST overview
 - **stats**: Generate manuscript statistics
 - **all**: Run complete analysis (process + overview + stats)
-- **test**: Test mode with subset of genomes
 
 ### Direct Python Execution (Advanced)
 
@@ -69,10 +69,9 @@ python blast_pipeline.py --mode stats
 ```
 
 ## BLAST Parameters
-- E-value threshold: 1e-5
-- Identity threshold: 90%
-- Coverage threshold: 80%
-- Max target sequences: 5
+- E-value threshold: 1e-5 (applied during BLAST search)
+- Percent identity filter: 80% (prokka_variants mode only)
+- Best hit selection: By bitscore per query per genome (applied during post-processing)
 - BLAST modes: coding_protein, coding_nt, prokka_variants, noncoding
 
 ## Performance Configuration
@@ -102,6 +101,6 @@ The statistics generated include:
 ## Notes
 - The pipeline automatically detects genome prefixes from `.fna`/`.faa`/`.gff` files
 - Array jobs process genomes in batches for efficiency
-- All outputs are centralized in `../04_core_gene_analysis/output/` for downstream analysis
+- All summary outputs are saved in `output/` directory
 - The pipeline includes comprehensive error handling and logging
 - Progress is tracked in `output/pipeline_*.out` and `output/pipeline_*.err` files

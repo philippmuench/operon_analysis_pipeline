@@ -14,10 +14,10 @@
 #   2. Single mode: Process results and generate statistics
 #
 # Usage:
-#   sbatch run_pipeline.sh                    # Run array job for BLAST search
-#   sbatch --array=1 run_pipeline.sh process  # Process results only
-#   sbatch --array=1 run_pipeline.sh stats    # Generate statistics only
-#   sbatch --array=1 run_pipeline.sh all      # Run complete pipeline
+#   sbatch --array=1-86 run_pipeline.sh       # Run array job for BLAST search
+#   sbatch run_pipeline.sh process            # Process results only
+#   sbatch run_pipeline.sh stats              # Generate statistics only
+#   sbatch run_pipeline.sh all                # Run complete pipeline (process + overview + stats)
 
 set -euo pipefail
 
@@ -104,18 +104,9 @@ case "$MODE" in
         fi
         ;;
         
-    test)
-        # Test mode - process small subset
-        echo "Running in TEST mode (50 genomes only)"
-        python blast_pipeline.py \
-            --mode all \
-            --test \
-            --threads "$SLURM_CPUS_PER_TASK"
-        ;;
-        
     *)
         echo "ERROR: Unknown mode: $MODE"
-        echo "Valid modes: search, process, overview, stats, all, test"
+        echo "Valid modes: search, process, overview, stats, all"
         exit 1
         ;;
 esac
@@ -130,8 +121,12 @@ if [ "$MODE" = "search" ] && [ -n "${SLURM_ARRAY_TASK_ID:-}" ]; then
         echo ""
         echo "This appears to be the last batch."
         echo "After all array jobs complete, run:"
-        echo "  sbatch --array=1 run_pipeline.sh process"
-        echo "  sbatch --array=1 run_pipeline.sh stats"
+        echo "  sbatch run_pipeline.sh all"
+        echo ""
+        echo "Or run individual steps:"
+        echo "  sbatch run_pipeline.sh process"
+        echo "  sbatch run_pipeline.sh overview"
+        echo "  sbatch run_pipeline.sh stats"
         echo ""
     fi
 fi
