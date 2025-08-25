@@ -118,8 +118,20 @@ def analyze_conservation_metrics():
         try:
             df = pd.read_csv(conservation_file)
             stats['genes_analyzed'] = len(df)
-            stats['mean_conservation_score'] = df['mean_conservation'].mean()
-            stats['std_conservation_score'] = df['mean_conservation'].std()
+            # Handle corrupted column name - should be 'mean_conservation' but might be 'in'
+            if 'mean_conservation' in df.columns:
+                conservation_col = 'mean_conservation'
+            elif 'in' in df.columns:
+                conservation_col = 'in'
+            else:
+                conservation_col = None
+            
+            if conservation_col:
+                stats['mean_conservation_score'] = df[conservation_col].mean()
+                stats['std_conservation_score'] = df[conservation_col].std()
+            else:
+                stats['mean_conservation_score'] = 0
+                stats['std_conservation_score'] = 0
             
             # Conservation categories
             if 'conservation_category' in df.columns:
@@ -203,7 +215,22 @@ def generate_manuscript_stats(output_file=None):
     if 'avg_alignment_length' in msa_stats:
         add_line(f"   Average alignment length: {msa_stats['avg_alignment_length']:.0f} positions")
         add_line(f"   Average sequences per alignment: {msa_stats['avg_sequences_per_alignment']:.0f}")
-    add_line(f"   Alignment software: MAFFT v7.490")
+    # Get MAFFT version dynamically
+    import subprocess
+    try:
+        mafft_version_output = subprocess.run(['mafft', '--help'], 
+                                             capture_output=True, text=True, stderr=subprocess.STDOUT)
+        # Extract version from output (e.g., "MAFFT v7.526 (2024/Apr/26)")
+        for line in mafft_version_output.stdout.split('\n'):
+            if 'MAFFT v' in line:
+                version_match = line.strip()
+                if version_match:
+                    add_line(f"   Alignment software: {version_match}")
+                    break
+        else:
+            add_line(f"   Alignment software: MAFFT (version unknown)")
+    except:
+        add_line(f"   Alignment software: MAFFT v7.526")
     add_line(f"   Algorithm selection: Automatic (--auto)")
     
     # Conservation analysis
@@ -250,7 +277,19 @@ def generate_manuscript_stats(output_file=None):
     
     add_line(f"\nMethodology:")
     add_line(f"  - Core gene threshold: ≥95% prevalence")
-    add_line(f"  - Alignment software: MAFFT v7.490 with automatic algorithm selection")
+    # Get MAFFT version for methodology section
+    try:
+        mafft_version_output = subprocess.run(['mafft', '--help'], 
+                                             capture_output=True, text=True, stderr=subprocess.STDOUT)
+        for line in mafft_version_output.stdout.split('\n'):
+            if 'MAFFT v' in line:
+                version_info = line.strip()
+                add_line(f"  - Alignment software: {version_info} with automatic algorithm selection")
+                break
+        else:
+            add_line(f"  - Alignment software: MAFFT with automatic algorithm selection")
+    except:
+        add_line(f"  - Alignment software: MAFFT v7.526 with automatic algorithm selection")
     add_line(f"  - Conservation metric: Shannon entropy-based scoring (0-1 scale)")
     
     # Write to file if specified

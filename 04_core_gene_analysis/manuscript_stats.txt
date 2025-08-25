@@ -31,7 +31,7 @@ Core Gene Analysis Statistics for Manuscript
    Alignments created: 1,252
    Average alignment length: 1079 positions
    Average sequences per alignment: 8562
-   Alignment software: MAFFT v7.490
+   Alignment software: MAFFT v7.526
    Algorithm selection: Automatic (--auto)
 
 5. Conservation Analysis:
@@ -55,5 +55,5 @@ Mean conservation score: 0.931
 
 Methodology:
   - Core gene threshold: ≥95% prevalence
-  - Alignment software: MAFFT v7.490 with automatic algorithm selection
+  - Alignment software: MAFFT v7.526 with automatic algorithm selection
   - Conservation metric: Shannon entropy-based scoring (0-1 scale)

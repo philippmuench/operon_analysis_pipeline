@@ -1,4 +1,4 @@
-gene,n_sequences,alignment_length,mean_conservation,median_conservation,std_conservation,highly_conserved_pct,moderately_conserved_pct,variable_pct,mean_gaps_per_position,max_gaps_per_position,positions_with_gaps_pct
+gene,n_sequences,alignment_length,in,median_conservation,std_conservation,highly_conserved_pct,moderately_conserved_pct,variable_pct,mean_gaps_per_position,max_gaps_per_position,positions_with_gaps_pct
 pheS,8580,1059,0.9933922909954347,1.0,0.04226962690084447,98.30028328611898,1.6052880075542966,0.09442870632672333,97.21246458923513,8579,1.13314447592068
 niaX,8580,630,0.993190586179983,1.0,0.041249184209379584,98.57142857142858,1.4285714285714286,0.0,163.63809523809525,8579,4.761904761904762
 gph_2,8580,1104,0.730794678759096,0.6728118269214727,0.274451720423117,47.55434782608695,36.95652173913043,15.489130434782608,3674.616847826087,8579,97.82608695652173
