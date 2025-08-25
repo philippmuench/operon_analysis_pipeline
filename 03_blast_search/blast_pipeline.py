@@ -373,8 +373,13 @@ class BlastPipeline:
             
         self.logger.info(f"Found {len(genome_ids)} genomes to process")
         
-        # Track high-quality hits statistics
-        hq_stats = {'total_hits': 0, 'hq_hits': 0}
+        # Track high-quality hits statistics (separate by mode for manuscript consistency)
+        hq_stats = {
+            'total_hits': 0, 'hq_hits': 0,  # Overall counts
+            'tblastn_hits': 0, 'tblastn_hq': 0,  # Protein-only counts for manuscript
+            'blastn_nt_hits': 0, 'blastn_nt_hq': 0,  # Nucleotide coding
+            'blastn_nc_hits': 0, 'blastn_nc_hq': 0   # Noncoding/promoter
+        }
         
         for genome_id in genome_ids:
             # Process tblastn results (coding_protein)
@@ -385,13 +390,16 @@ class BlastPipeline:
                                      'mismatch', 'gapopen', 'qstart', 'qend',
                                      'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
                 # Keep best hit per query gene
-                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first()
+                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first().reset_index()
                 best_hits['genome_id'] = genome_id
                 best_hits['search_type'] = 'tblastn'
                 # Add HQ flag
                 best_hits['is_hq'] = (best_hits['pident'] >= 90) & (best_hits['qcovs'] >= 80)
+                # Update overall and mode-specific stats
                 hq_stats['total_hits'] += len(best_hits)
                 hq_stats['hq_hits'] += best_hits['is_hq'].sum()
+                hq_stats['tblastn_hits'] += len(best_hits)
+                hq_stats['tblastn_hq'] += best_hits['is_hq'].sum()
                 all_results.append(best_hits)
                 
             # Process blastn results (coding_nt)
@@ -401,12 +409,15 @@ class BlastPipeline:
                                names=['qseqid', 'sseqid', 'pident', 'length', 
                                      'mismatch', 'gapopen', 'qstart', 'qend',
                                      'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
-                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first()
+                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first().reset_index()
                 best_hits['genome_id'] = genome_id
                 best_hits['search_type'] = 'blastn_nt'
                 best_hits['is_hq'] = (best_hits['pident'] >= 90) & (best_hits['qcovs'] >= 80)
+                # Update overall stats but NOT manuscript primary stats
                 hq_stats['total_hits'] += len(best_hits)
                 hq_stats['hq_hits'] += best_hits['is_hq'].sum()
+                hq_stats['blastn_nt_hits'] += len(best_hits)
+                hq_stats['blastn_nt_hq'] += best_hits['is_hq'].sum()
                 all_results.append(best_hits)
                 
             # Process non-coding BLAST results
@@ -416,12 +427,15 @@ class BlastPipeline:
                                names=['qseqid', 'sseqid', 'pident', 'length', 
                                      'mismatch', 'gapopen', 'qstart', 'qend',
                                      'sstart', 'send', 'evalue', 'bitscore', 'qcovs'])
-                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first()
+                best_hits = df.sort_values('bitscore', ascending=False).groupby('qseqid').first().reset_index()
                 best_hits['genome_id'] = genome_id
                 best_hits['search_type'] = 'blastn_noncoding'
                 best_hits['is_hq'] = (best_hits['pident'] >= 90) & (best_hits['qcovs'] >= 80)
+                # Update overall stats but NOT manuscript primary stats
                 hq_stats['total_hits'] += len(best_hits)
                 hq_stats['hq_hits'] += best_hits['is_hq'].sum()
+                hq_stats['blastn_nc_hits'] += len(best_hits)
+                hq_stats['blastn_nc_hq'] += best_hits['is_hq'].sum()
                 all_results.append(best_hits)
                 
         if all_results:
@@ -429,10 +443,13 @@ class BlastPipeline:
             combined_df.to_csv(self.output_dir / 'all_blast_hits.csv')
             self.logger.info(f"Saved combined results to {self.output_dir / 'all_blast_hits.csv'}")
             
-            # Log HQ statistics
+            # Log HQ statistics (report tblastn as primary for manuscript consistency)
+            if hq_stats['tblastn_hits'] > 0:
+                tbl_hq_pct = (hq_stats['tblastn_hq'] / hq_stats['tblastn_hits']) * 100
+                self.logger.info(f"High-quality hits [tblastn primary]: {hq_stats['tblastn_hq']}/{hq_stats['tblastn_hits']} ({tbl_hq_pct:.1f}%)")
             if hq_stats['total_hits'] > 0:
-                hq_pct = (hq_stats['hq_hits'] / hq_stats['total_hits']) * 100
-                self.logger.info(f"High-quality hits (≥90% identity, ≥80% coverage): {hq_stats['hq_hits']}/{hq_stats['total_hits']} ({hq_pct:.1f}%)")
+                total_hq_pct = (hq_stats['hq_hits'] / hq_stats['total_hits']) * 100
+                self.logger.info(f"High-quality hits [all modes]: {hq_stats['hq_hits']}/{hq_stats['total_hits']} ({total_hq_pct:.1f}%)")
             
             # Generate summary
             self.generate_summary(combined_df)
@@ -450,8 +467,8 @@ class BlastPipeline:
             # Count hits from different search types
             gene_hits = genome_df[genome_df['search_type'].isin(['tblastn', 'blastn_nt'])]['qseqid'].nunique()
             noncoding_hits = genome_df[genome_df['search_type'] == 'blastn_noncoding']['qseqid'].nunique()
-            # Count HQ hits
-            hq_gene_hits = genome_df[(genome_df['search_type'].isin(['tblastn', 'blastn_nt'])) & 
+            # Count HQ hits (use tblastn only for manuscript consistency)
+            hq_gene_hits = genome_df[(genome_df['search_type'] == 'tblastn') & 
                                     (genome_df['is_hq'] == True)]['qseqid'].nunique()
             
             summary.append({
@@ -614,6 +631,38 @@ class BlastPipeline:
                 else:
                     f.write(f"{mode}: Directory not found\n")
             f.write("\n")
+            
+            # Add detailed hit statistics by mode
+            hits_path = self.output_dir / 'all_blast_hits_detailed.csv'
+            if hits_path.exists():
+                hits_df = pd.read_csv(hits_path)
+                
+                f.write("HITS BY MODE\n")
+                f.write("-" * 40 + "\n")
+                
+                # Separate by search type
+                tbl_hits = hits_df[hits_df['search_type'] == 'tblastn']
+                nt_hits = hits_df[hits_df['search_type'] == 'blastn_nt']
+                nc_hits = hits_df[hits_df['search_type'] == 'blastn_noncoding']
+                
+                # Report tblastn as primary
+                if len(tbl_hits) > 0:
+                    tbl_hq = tbl_hits['is_hq'].sum()
+                    f.write(f"tblastn (protein vs genome): {len(tbl_hits):,} hits ")
+                    f.write(f"(HQ: {tbl_hq:,}/{len(tbl_hits):,} = {100*tbl_hq/len(tbl_hits):.1f}%)\n")
+                    
+                if len(nt_hits) > 0:
+                    nt_hq = nt_hits['is_hq'].sum()
+                    f.write(f"blastn coding (nt vs genome): {len(nt_hits):,} hits ")
+                    f.write(f"(HQ: {nt_hq:,}/{len(nt_hits):,} = {100*nt_hq/len(nt_hits):.1f}%)\n")
+                    
+                if len(nc_hits) > 0:
+                    nc_hq = nc_hits['is_hq'].sum()
+                    f.write(f"blastn noncoding (promoters): {len(nc_hits):,} hits ")
+                    f.write(f"(HQ: {nc_hq:,}/{len(nc_hits):,} = {100*nc_hq/len(nc_hits):.1f}%)\n")
+                
+                f.write("\nNOTE: Primary statistics reported for tblastn only to avoid double-counting.\n")
+                f.write("\n")
             
             # Load and analyze results
             if (self.output_dir / 'operon_summary.csv').exists():

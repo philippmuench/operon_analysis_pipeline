@@ -2,7 +2,6 @@
 #SBATCH --job-name=blast_pipeline
 #SBATCH --output=output/pipeline_%A_%a.out
 #SBATCH --error=output/pipeline_%A_%a.err
-#SBATCH --array=1-86%20
 #SBATCH --time=6:00:00
 #SBATCH --mem=128G
 #SBATCH --cpus-per-task=60
