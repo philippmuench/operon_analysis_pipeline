@@ -1,140 +1,63 @@
-# Operon Analysis Pipeline
+# Operon Conservation Analysis Pipeline
 
-A bioinformatics pipeline for analyzing sequence diversity in the fructoselysine/glucoselysine operon across <em>Enterococcus faecalis</em> genomes.
+This repository contains the complete analysis pipeline for studying the conservation and diversity of the fructoselysine/glucoselysine utilization operon across 8,587 *Enterococcus faecalis* genomes.
 
-## Overview
+## Pipeline Overview
 
-This pipeline processes <em>E. faecalis</em> genome assemblies to:
-1. Annotate genomes with Prokka
-2. Extract reference operon genes from GenBank
-3. Search for operon genes across all genomes using BLAST
-4. Identify and analyze core genes for comparison
-5. Extract operon sequences from assemblies and create MSAs
-6. Run diversity analyses and generate plots
-7. Run dN/dS and substitution analyses
+The analysis consists of individual steps that should be executed sequentially. Each step is self-contained in its own directory with documentation and scripts.
 
-## Quick Start
+## Analysis Steps
 
-### Prerequisites
+Individual analysis steps are organized in numbered directories from `01_prokka_annotation` to `10_phylophlan`. Each directory contains:
+- A README.md file describing the specific analysis
+- Pipeline scripts (Python and/or shell scripts)
+- Input/output specifications
+- Results in the `output/` subdirectory
 
-```bash
-# Create conda environment
-conda env create -f environment.yml
-conda activate efs_diversity
-```
+Please navigate to each directory and execute the steps individually according to their documentation.
 
-### Test Run (50 genomes)
-
-```bash
-# 1. Annotate genomes with Prokka
-cd 01_prokka_annotation
-sbatch run_prokka.sh --test
-
-# 2. Extract operon genes from reference GenBank
-cd ../02_reference_operon_extraction
-python extract_operon_genes.py
-
-# 3. Search for operon genes via BLAST
-cd ../03_blast_search
-sbatch run_blast_search.sh
-python process_blast_results.py
-python create_blast_overview.py
-python create_simple_summary.py
-
-# 4. Identify core genes
-cd ../04_core_gene_analysis
-sbatch run_core_analysis.sh
-
-# 5. Extract operon sequences from assemblies and create MSAs
-cd ../05_operon_assembly_extraction
-sbatch run_operon_extraction.sh
-
-# 6. Diversity analysis
-cd ../06_diversity_analysis
-sbatch run_complete_diversity_analysis.sh
-
-# 7. dN/dS and substitution analyses
-cd ../07_dnds_analysis
-sbatch run_dnds_analysis.sh
-```
-
-### Full Run (8,587 genomes)
-
-Remove the `--test` flag from the commands above to process all genomes.
-
-## Pipeline Structure
+## Directory Structure
 
 ```
-operon_analysis/
-├── 01_prokka_annotation/           # Genome annotation with Prokka
-├── 02_reference_operon_extraction/ # Extract reference operon genes from GenBank
-├── 03_blast_search/                # Search for operon genes via BLAST
-├── 04_core_gene_analysis/          # Identify and analyze core genes; create core MSAs
-├── 05_operon_assembly_extraction/  # Extract operon sequences from assemblies; create MSAs
-├── 06_diversity_analysis/          # Diversity metrics and plots (operon and core)
-├── 07_dnds_analysis/               # dN/dS and substitution analyses
-├── environment.yml                 # Conda environment specification
-└── run_pipeline.sh                 # Master pipeline script
+01_prokka_annotation/     - Genome annotation with Prokka
+02_reference_operon_extraction/ - Extract reference operon sequences
+03_blast_search/          - BLAST-based homology searches
+04_core_gene_analysis/    - Core genome analysis for comparison
+05_operon_assembly_extraction/ - Extract operon sequences from assemblies
+06_diversity_analysis/    - Comparative conservation analysis
+07_dnds_analysis/         - Selection pressure (dN/dS) analysis
+07b_codon_variation_analysis/ - Codon-level variation and pN/pS analysis
+08_start_site_analysis/   - Start codon usage patterns
+09_operon_order_analysis/ - Gene order and synteny analysis
+10_phylophlan/            - Phylogenetic analysis
 ```
-
-## Key Features
-
-- **Modular design**: Each step can be run independently
-- **Test mode**: Process 50 genomes for testing
-- **SLURM support**: Optimized for HPC clusters
-- **Multi-strategy BLAST approaches**: 
-  - tblastn (protein→nucleotide) for protein-coding genes
-  - blastn (nucleotide→nucleotide) for regulatory elements
-  - Multiple extraction strategies for robust comparison
-
-## Target Operon
-
-The fructoselysine/glucoselysine operon contains 7 genes:
-- `frpC`: Fructoselysine-6-phosphate deglycase
-- `glpC`: Glucoselysine-6-phosphate deglycase
-- `ptsD`: PTS system EIID component
-- `ptsC`: PTS system EIIC component
-- `ptsB`: PTS system EIIB component
-- `ptsA`: PTS system EIIA component
-- `fruR`: Sigma-54 dependent transcriptional regulator
-
-Plus regulatory elements:
-- Promoter region
-- Pribnow box (-10 box)
-
-## Results Summary
-
-### Test Run Results (50 genomes)
-- **Operon prevalence:** 96% (48/50 genomes)
-- **Complete operons:** 48 genomes with all 7 genes
-- **Core genes identified:** 1,269 genes (≥95% prevalence)
-- **Promoter found in:** 100% of genomes
-
-### Expected Results (8,587 genomes)
-- **Operon prevalence:** ~96% of genomes
-- **Conservation:** >98% average identity
-- **Selection:** Strong purifying (dN/dS < 1)
-- **Core genes:** ~1,225 at 95% threshold
 
 ## Requirements
 
-- SLURM cluster with `cpu` partition
-- Conda environment: `efs_diversity`
-- ~500GB storage for intermediate files
-- ~200 CPU hours total for full run
+See `environment.yml` for the complete conda environment specification. Key dependencies include:
+- Prokka 1.14.6
+- BLAST+ 2.15.0
+- MAFFT 7.520
+- Python 3.10 with BioPython, pandas, numpy, matplotlib
 
-## Data Requirements
+## Usage
 
-- Input genomes: `../Efs_assemblies/*.fasta.gz`
-- Reference operon: `02_reference_operon_extraction/operon.gb`
+Each step should be executed individually in order:
 
-## Citation
+```bash
+cd 01_prokka_annotation
+bash run_prokka_pipeline.sh
 
-If you use this pipeline, please cite:
+cd ../02_reference_operon_extraction
+python extract_operon_genes.py
+
+# Continue with subsequent steps...
 ```
-[Citation information to be added]
-```
 
-## License
+## Data
 
-[License information to be added]
+Input genomes and metadata are not included in this repository due to size constraints.
+
+## Results
+
+Key results and visualizations are available in each step's `output/` directory. See `manuscript.md` for integrated results and interpretation.
