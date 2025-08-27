@@ -41,3 +41,7 @@ test_*.py
 __pycache__/
 **/__pycache__/
 */output_old/
+
+# Remove from GitHub but keep locally
+07_dnds_analysis/
+run_pipeline.sh
