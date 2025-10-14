@@ -53,8 +53,6 @@ All results are written beneath `output/`:
   allele counts, and amino-acid states.
 - `plots/<gene>_variable_codons.pdf` – scatter plot marking each variable codon,
   coloured by synonymous/non-synonymous status.
-- `plots/focus_sites/<gene>_codon_<index>_profile.pdf` – bar chart of allele
-  counts for highlighted codon positions.
 - `plots/focus_sites/examples/<gene>_codon_<index>_examples.pdf` – raw codon
   snapshots showing example sequences (colour-coded by nucleotide and amino acid).
 - `plots/focus_sites/windows/<gene>_codon_<index>_window.pdf` – heatmap of amino
