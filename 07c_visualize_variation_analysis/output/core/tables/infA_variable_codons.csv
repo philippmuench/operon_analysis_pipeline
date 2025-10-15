@@ -1,0 +1,7 @@
+codon_index,category,syn_changes,nonsyn_changes,n_variants,n_sequences,aa_states,codon_counts
+15,nonsynonymous-only,0,1,2,8578,"E×1, K×1","GAA×8576, AAA×2"
+19,nonsynonymous-only,0,1,2,8578,"I×1, N×1","AAT×8577, ATT×1"
+43,nonsynonymous-only,0,1,2,8578,"H×1, R×1","CAC×8577, CGC×1"
+44,synonymous-only,1,0,2,8578,Y×2,"TAC×8577, TAT×1"
+56,nonsynonymous-only,0,1,2,8578,"E×1, G×1","GAA×8577, GGA×1"
+65,nonsynonymous-only,0,1,3,8578,"G×2, V×1","GGC×8576, GGA×1, GTC×1"

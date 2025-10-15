@@ -1,0 +1,41 @@
+Gene ptsA
+  Variable codons: 60
+  Synonymous-only: 27
+  Non-synonymous-only: 33
+  Top sites: 7 (nonsynonymous-only, C×2, H×1, Y×1); 145 (nonsynonymous-only, S×2, F×1, P×1); 18 (nonsynonymous-only, R×2, H×1); 28 (nonsynonymous-only, F×2, Y×1); 53 (nonsynonymous-only, I×1, M×1, T×1)
+
+Gene ptsB
+  Variable codons: 71
+  Synonymous-only: 25
+  Non-synonymous-only: 46
+  Top sites: 64 (nonsynonymous-only, A×2, G×1, V×1); 66 (nonsynonymous-only, A×2, S×1, V×1); 4 (synonymous-only, L×3); 21 (nonsynonymous-only, T×2, S×1); 25 (nonsynonymous-only, G×2, D×1)
+
+Gene ptsC
+  Variable codons: 126
+  Synonymous-only: 46
+  Non-synonymous-only: 80
+  Top sites: 94 (nonsynonymous-only, V×3, F×1, I×1); 210 (nonsynonymous-only, G×4, V×1); 22 (nonsynonymous-only, G×3, E×1); 36 (nonsynonymous-only, V×3, I×1); 41 (nonsynonymous-only, G×2, A×1, D×1)
+
+Gene ptsD
+  Variable codons: 117
+  Synonymous-only: 12
+  Non-synonymous-only: 105
+  Top sites: 147 (nonsynonymous-only, A×1, D×1, S×1, T×1, V×1); 180 (nonsynonymous-only, D×1, N×1, V×1, Y×1); 251 (nonsynonymous-only, I×2, R×1, Y×1); 252 (nonsynonymous-only, A×1, D×1, E×1, K×1); 21 (nonsynonymous-only, S×2, A×1)
+
+Gene frpC
+  Variable codons: 146
+  Synonymous-only: 47
+  Non-synonymous-only: 99
+  Top sites: 32 (nonsynonymous-only, T×2, A×1, G×1); 38 (nonsynonymous-only, V×3, F×1); 152 (nonsynonymous-only, I×2, M×1, R×1); 185 (nonsynonymous-only, A×1, E×1, T×1, V×1); 261 (nonsynonymous-only, P×2, L×1, Q×1)
+
+Gene fruR
+  Variable codons: 422
+  Synonymous-only: 94
+  Non-synonymous-only: 328
+  Top sites: 128 (nonsynonymous-only, G×3, D×1, S×1, Y×1); 203 (nonsynonymous-only, A×2, S×1, T×1, V×1); 416 (nonsynonymous-only, L×1, P×1, R×1, S×1, T×1); 421 (nonsynonymous-only, H×1, N×1, Q×1, R×1, Y×1); 4 (nonsynonymous-only, T×2, M×1, R×1)
+
+Gene glpC
+  Variable codons: 181
+  Synonymous-only: 57
+  Non-synonymous-only: 124
+  Top sites: 129 (nonsynonymous-only, L×3, F×1, M×1, S×1); 206 (nonsynonymous-only, G×4, R×1); 350 (nonsynonymous-only, A×2, S×1, T×1, V×1); 49 (nonsynonymous-only, A×1, E×1, T×1, V×1); 57 (nonsynonymous-only, V×2, E×1, M×1)

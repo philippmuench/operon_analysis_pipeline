@@ -1,0 +1,12 @@
+codon_index,category,syn_changes,nonsyn_changes,n_variants,n_sequences,aa_states,codon_counts
+1,nonsynonymous-only,0,1,2,8580,"M×1, V×1","ATG×8579, GTG×1"
+2,synonymous-only,1,0,2,8580,S×2,"TCA×8579, TCG×1"
+13,synonymous-only,1,0,2,8580,D×2,"GAT×8575, GAC×5"
+25,nonsynonymous-only,0,1,2,8580,"K×1, Q×1","AAA×8579, CAA×1"
+32,nonsynonymous-only,0,1,2,8580,"S×1, T×1","TCA×8576, ACA×4"
+46,synonymous-only,1,0,2,8580,K×2,"AAG×8579, AAA×1"
+50,synonymous-only,1,0,2,8580,E×2,"GAA×8579, GAG×1"
+51,nonsynonymous-only,0,1,2,8580,"A×1, V×1","GCA×8579, GTA×1"
+52,nonsynonymous-only,0,1,2,8580,"A×1, T×1","GCT×8579, ACT×1"
+54,synonymous-only,1,0,2,8580,K×2,"AAA×8579, AAG×1"
+55,nonsynonymous-only,0,1,2,8580,"H×1, R×1","CGT×8579, CAT×1"

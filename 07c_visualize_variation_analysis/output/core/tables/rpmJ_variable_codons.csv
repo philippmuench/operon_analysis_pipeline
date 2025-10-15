@@ -1,0 +1,4 @@
+codon_index,category,syn_changes,nonsyn_changes,n_variants,n_sequences,aa_states,codon_counts
+27,synonymous-only,1,0,2,8576,C×2,"TGC×8575, TGT×1"
+28,nonsynonymous-only,0,1,2,8576,"P×1, S×1","CCA×8575, TCA×1"
+35,nonsynonymous-only,0,1,2,8576,"Q×1, R×1","CAA×8574, CGA×2"
