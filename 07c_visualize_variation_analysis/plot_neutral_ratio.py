@@ -120,8 +120,11 @@ def main() -> None:
     outer = GridSpec(1, 3, width_ratios=[1.1, 1.8, 1.3], wspace=0.35)
 
     ax_bar = fig.add_subplot(outer[0])
-    bars = ax_bar.bar(['Synonymous', 'Non-synonymous'], [syn_total, nonsyn_total],
+    width = 0.5
+    bars = ax_bar.bar([0, 1], [syn_total, nonsyn_total], width=width,
                       color=['#4daf4a', '#e41a1c'])
+    ax_bar.set_xticks([0, 1])
+    ax_bar.set_xticklabels(['Synonymous', 'Non-synonymous'])
     ax_bar.set_ylabel('Single-nucleotide opportunities')
     ax_bar.set_title('All sense codons')
     for bar, value in zip(bars, [syn_total, nonsyn_total]):

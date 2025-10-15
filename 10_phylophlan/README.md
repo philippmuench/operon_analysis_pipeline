@@ -151,9 +151,77 @@ graphlan_annotate.py \
 └── logs/                          # Execution logs
 ```
 
+## Graphlan Visualization
+
+After running PhyloPhlan, you can create publication-ready circular phylogenetic trees using Graphlan.
+
+### Prerequisites
+
+- Graphlan (install with: `conda install -c bioconda graphlan`)
+- Metadata file: `../00_annotation/8587_Efs_metadata_ASbarcode.txt`
+
+### SLURM Batch Job
+
+Submit to SLURM queue:
+
+```bash
+# Submit the Graphlan job
+sbatch run_graphlan.sh
+```
+
+This will:
+- Create `phylogeny.xml` (Graphlan format)
+- Generate `phylogeny.png` (high-res visualization)
+- Generate `phylogeny.svg` (vector format)
+- Run time: ~10-30 minutes
+
+### Manual Graphlan Commands
+
+If you prefer to run step-by-step:
+
+```bash
+# 1. Create annotation file (if not exists)
+python ../create_proper_graphlan_annotation.py
+
+# 2. Convert tree to Graphlan XML
+graphlan_annotate.py output_isolates/RAxML_bestTree.input_isolates_refined.tre \
+                     phylogeny.xml \
+                     --annot graphlan_proper_annotation.txt
+
+# 3. Generate PNG visualization
+graphlan.py phylogeny.xml phylogeny.png --size 20 --dpi 300
+
+# 4. Generate SVG (optional)
+graphlan.py phylogeny.xml phylogeny.svg --size 20 --dpi 300 --format svg
+```
+
+### Output Files
+
+- `phylogeny.xml` - Graphlan XML format (intermediate)
+- `phylogeny.png` - High-resolution circular tree (main output)
+- `phylogeny.svg` - Vector format (editable in Inkscape/Illustrator)
+- `graphlan_clean_annotation.txt` - Clean annotation file (no labels, with legend)
+
+### Visualization Features
+
+- **Circular layout** with samples arranged in a circle
+- **Color-coded by niche** (9 major categories)
+- **Publication quality** (20 inches at 300 DPI)
+- **1,027 representative samples** (limited for clarity)
+- **Clean legend** (no overlapping labels, clear color coding)
+- **No sample ID labels** (cleaner appearance)
+
+### Customization
+
+- Edit `graphlan_clean_annotation.txt` to modify colors/annotations
+- Adjust `--size` and `--dpi` parameters for different resolutions
+- Modify the annotation script to change which samples are included
+- Run `python ../create_clean_graphlan_annotation.py` to regenerate
+
 ## Notes
 
 - Currently configured for 100 test genomes
 - Full analysis would process all available E. faecalis genomes
 - Tree files are in Newick format, compatible with most phylogenetic visualization tools
 - The analysis focuses on core gene conservation across isolates
+- Graphlan visualization provides publication-ready circular phylogenies

@@ -2,10 +2,11 @@
 #SBATCH --job-name=phylophlan_isolates
 #SBATCH --output=logs/phylophlan_%j.out
 #SBATCH --error=logs/phylophlan_%j.err
-#SBATCH --time=24:00:00
-#SBATCH --mem=128G
-#SBATCH --cpus-per-task=80
+#SBATCH --time=72:00:00
+#SBATCH --mem=64G
+#SBATCH --cpus-per-task=70
 #SBATCH --partition=cpu
+#SBATCH --qos=verylong
 
 echo "=========================================="
 echo "PhyloPhlAn Analysis for E. faecalis Isolates"
@@ -60,7 +61,7 @@ phylophlan \
     --not_variant_threshold 0.99 \
     --remove_fragmentary_entries \
     --fragmentary_threshold 0.67 \
-    --min_num_entries 50 \
+    --min_num_entries 500 \
     -t a \
     -f isolates_config.cfg \
     --diversity low \
