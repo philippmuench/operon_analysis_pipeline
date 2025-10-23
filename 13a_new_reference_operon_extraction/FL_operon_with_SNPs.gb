@@ -1,0 +1,293 @@
+LOCUS       FL_operon_with_SNPs        8031 bp    DNA     linear   UNA 17-OCT-2025
+DEFINITION  Enterococcus faecalis strain KB1 chromosome.
+ACCESSION   urn.local...g-jscfj7e
+VERSION     urn.local...g-jscfj7e
+KEYWORDS    .
+SOURCE      
+  ORGANISM  .
+COMMENT     ##species-START##
+            species :: https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi
+                       ?id=1351
+            ##species-END##
+            ##gff-version-START##
+            gff-version :: 3
+            ##gff-version-END##
+            ##Imported_From-START##
+            Filename :: GCA_016696825.1_ASM1669682v1_genomic.fna
+            Path     :: S:\Abilash\Marbouty_annotation_refseq_genbank_2022\Geni
+                        ous_analysis\enterococcus_faecalis_KB1
+            ##Imported_From-END##
+FEATURES             Location/Qualifiers
+     misc_feature    
+                     /note="Geneious type: Editing History Deletion"
+                     /standard_name="GCAAAGGTCATTGTATAGATTTTCGGTTTTGTCATTGGTTTT
+                     CCTACTTTCTGAAGTATTCTCTCTTCAGTCTACCACAGGCTTG"
+     misc_feature    complement(24..1028)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="Catalyzes the conversion of a range of
+                     fructosamine 6- phosphates to glucose 6-phosphate and a
+                     free amino acid"
+     misc_feature    complement(24..1028)
+                     /note="Geneious type: kofam"
+                     /standard_name="fructoselysine-6-phosphate deglycase"
+     misc_feature    complement(24..1028)
+                     /note="Geneious type: NCBI"
+                     /standard_name="SIS domain-containing protein"
+     misc_feature    complement(24..1028)
+                     /note="Geneious type: operonMapper"
+                     /Function="[M] Predicted phosphosugar isomerases"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     variation       859
+                     /standard_name="A"
+     misc_feature    complement(1022..2098)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="SIS domain"
+     misc_feature    complement(1022..2098)
+                     /note="Geneious type: kofam"
+                     /standard_name="glucoselysine-6-phosphate deglycase"
+     misc_feature    complement(1022..2098)
+                     /note="Geneious type: NCBI"
+                     /standard_name="SIS domain-containing protein"
+     misc_feature    complement(1022..2098)
+                     /note="Geneious type: operonMapper"
+                     /Function="[M] Predicted phosphosugar isomerases"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     misc_feature    complement(2109..2942)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="PTS system mannose/fructose/sorbose family
+                     IID component"
+     misc_feature    complement(2109..2942)
+                     /note="Geneious type: kofam"
+                     /standard_name="fructoselysine/glucoselysine PTS system
+                     EIID component"
+     misc_feature    complement(2109..2942)
+                     /note="Geneious type: NCBI"
+                     /standard_name="PTS system mannose/fructose/sorbose family
+                     transporter subunit IID"
+     misc_feature    complement(2109..2942)
+                     /note="Geneious type: operonMapper"
+                     /Function="[G] Phosphotransferase system,
+                     mannose/fructose/N-acetylgalactosamine-specific component
+                     IID"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     variation       2155
+                     /standard_name="A"
+     misc_feature    complement(2923..3714)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="PTS system sorbose-specific iic component"
+     misc_feature    complement(2923..3714)
+                     /note="Geneious type: kofam"
+                     /standard_name="fructoselysine/glucoselysine PTS system
+                     EIIC component"
+     misc_feature    complement(2923..3714)
+                     /note="Geneious type: NCBI"
+                     /standard_name="PTS sugar transporter subunit IIC"
+     misc_feature    complement(2923..3714)
+                     /note="Geneious type: operonMapper"
+                     /Function="[G] Phosphotransferase system,
+                     mannose/fructose/N-acetylgalactosamine-specific component
+                     IIC"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     variation       3455
+                     /standard_name="T"
+     variation       3568
+                     /standard_name="G"
+     misc_feature    complement(3730..4200)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="PTS system sorbose subfamily IIB
+                     component"
+     misc_feature    complement(3730..4200)
+                     /note="Geneious type: kofam"
+                     /standard_name="fructoselysine/glucoselysine PTS system
+                     EIIB component [EC:2.7.1.-]"
+     misc_feature    complement(3730..4200)
+                     /note="Geneious type: NCBI"
+                     /standard_name="PTS sugar transporter subunit IIB"
+     misc_feature    complement(3730..4200)
+                     /note="Geneious type: operonMapper"
+                     /Function="[G] Phosphotransferase system,
+                     mannose/fructose/N-acetylgalactosamine-specific component
+                     IIB"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     misc_feature    complement(4212..4676)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="PTS system fructose IIA component"
+     misc_feature    complement(4212..4676)
+                     /note="Geneious type: kofam"
+                     /standard_name="fructoselysine/glucoselysine PTS system
+                     EIIA component [EC:2.7.1.-]"
+     misc_feature    complement(4212..4676)
+                     /note="Geneious type: NCBI"
+                     /standard_name="PTS mannose transporter subunit IIA"
+     misc_feature    complement(4212..4676)
+                     /note="Geneious type: operonMapper"
+                     /Function="[G] Phosphotransferase system,
+                     mannose/fructose-specific component IIA"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     variation       4652..4653
+                     /standard_name="TG"
+     variation       4659
+                     /standard_name="A"
+     variation       4673
+                     /standard_name="G"
+     misc_feature    complement(4703..7462)
+                     /note="Geneious type: eggNOGDB"
+                     /standard_name="Sigma-54 interaction domain"
+     misc_feature    complement(4703..7462)
+                     /note="Geneious type: kofam"
+                     /standard_name="sigma-54 dependent transcriptional
+                     regulator, gfr operon transcriptional activator"
+     misc_feature    complement(4703..7462)
+                     /note="Geneious type: NCBI"
+                     /standard_name="sigma 54-interacting transcriptional
+                     regulator"
+     misc_feature    complement(4703..7462)
+                     /note="Geneious type: operonMapper"
+                     /Function="[KT] Transcriptional regulators containing an
+                     AAA-type ATPase"
+                     /standard_name="enterococcus_faecalis_KB1_211"
+     misc_feature    complement(4703..7462)
+                     /note="Geneious type: RGI"
+                     /standard_name="tetracycline antibiotic"
+     misc_feature    complement(7475..7478)
+                     /standard_name="-12 region"
+     variation       7501^7502
+                     /standard_name="A"
+     misc_feature    complement(7505..7512)
+                     /standard_name="Pribnow box"
+ORIGIN      
+        1 ctggaaaaag aggctatttt gtcttagtaa tcaaattgac gataataacg acgaatctct
+       61 aatgggtgac aattcaattt ttctacatgc gcatcaatgc gttgcgttac cgcatgcatt
+      121 aggagaaatg aaataactcg gccacgatat ttttcactaa ttcctggaag ttcatacgct
+      181 ttcgaatcaa taattgtata attggcacag attttcggca ataattttgc tactcgttct
+      241 gccaacggtc gctgctcgtc ttctccaata aacaacgtta ctggcgtagt ttcatctaca
+      301 atttctagcg ttccatgtaa gaactctgct gcatgaattg attttgagcg aagccaactt
+      361 tgctcttccc aatagcacat tgcataagaa tagaccgctc cccattggtt ccctgcgcca
+      421 ataaaatagt gaatgctatc atgacgatgt ttttccgcaa aagctaagcc aaacgcatcg
+      481 gcactttttt cggcttcagc taaacctgta ggcaaatatt cttccaattc ttggtaataa
+      541 ttttcgtaat ctgtaaattc gttgtttttt tgcattaaac gatcagctac cataaagaac
+      601 ttgatttgct cagttcctgg agctggataa gtcaccacat aatcacataa atctgctaaa
+      661 agactgtctt ttgcatcgat aaaaccaaat aacgttgcgc cgaccttttt gatttcttga
+      721 acggcttgca ccacttcttg tgttgtccca gtaacggaag acaagatgac gaatgatttt
+      781 tctgttaaac gtttattgcc tgttgtgtaa tactcagcag catgttgaac atagattggt
+      841 aaattacttt ttccattcgc ataagtaact gcttgcatgg ctgaagcata agtaccgccg
+      901 attcctaaat aataaaccgc atcaaatcct ttcgtccaaa cttgatcaac aactttttca
+      961 acatctgaac gcaaggctaa ggcacctcgt atgtctttga tttgttgttc ttcattaaat
+     1021 tttaacatgg ctgatttccc tctttctttg ctattttact ttttaggaca caatcaaaat
+     1081 catcaaaaat ccgttgagat aaatcaattc ctttacttgt agctacttga tacgccaaat
+     1141 attgaaatgg aataactaat aataaaggac taattttttc ttcgacatca cttgctaaac
+     1201 ctaacgtatt tgatgctctc gttgaacacg ttgtaattgt gtaacattgg ccaacataac
+     1261 tggctagata gtttctcaag gcttgactac gtgcttgaat aggactttga ttttcaataa
+     1321 aaaacaaaag atgtgtagta tccgcttcaa gataaggccc atgcatatag gcttcgactt
+     1381 caaatccttg ggaaggtaag cgaactgttt ctgtaaactt cgtctcaaac tcttttgccg
+     1441 taccaatatt gggcccataa ccaattgcga taaatcgtgt cccctctgtt aattcttttt
+     1501 tcgttttttg ccaaaattgt tcggttttat aaatcaccga atcgatttcc tgaattgctt
+     1561 tggcaagttt tgctaattct tcttcaacct ctacttttgt taattgatgc ttttgatagc
+     1621 ccagtttcaa accaaataga aataaattta aaagtgttgc cgtatagcct tttgtgacaa
+     1681 aaccaactgt ttcaagcccc atttttaaat ccaggacttc atccacaacc tccgtaatcg
+     1741 ggctggtgac atcacttgtc aaggccactg tttttacaga cgtttggttt ttaatttttg
+     1801 caatggcatc aattgttgaa gcacttttac cactttgcga aaccgctacg accagatcaa
+     1861 accgatcatc cactttgcca taatgagcaa aattgaacgg ctcttggatt tccacataaa
+     1921 taggcgccac ttcttcaagg taaactttag ccgcctgaca agcgttatgt gacgagccag
+     1981 ttgctaaaat tagacagtgc gtgacctttg aaacgtctgt atcagttaat tgaaattggt
+     2041 taagaatctg agttagagct gcttgctcct catttatata atccagcatt gttttcatat
+     2101 tttgcctcct aaaatagacc aattaatgag ccaagaattc cgacaattgc catgccacct
+     2161 aaaatcgcta aaggttttac ttcttttttc aataaataaa aaacaaaacc aaaagatgca
+     2221 agcggtaata atttaggcat gatatcgtca aagatacttt gaaccgtgac tgcatttttg
+     2281 ccacttccgc tgattgtaat cgggatagtt aaatcaatca tggaggcggt catagcacct
+     2341 accaccatca agccaattat tgaagcgcct aatgtgagac tttccatcat gccatttgct
+     2401 tgaatttttt tgagaaaacc agttcctaat ttgtagcccc aacgattcag taaataacga
+     2461 acaatcacat gaggaacgtt aaaaatgagt aaaaatagaa ttggccctaa cacattccct
+     2521 tgtaaagcta acgaagttcc aacacctgtt gcaatcaagc gtaaggttcc ccagaaaaag
+     2581 gaatcaccta aaccagctaa aggtcccatt aacgaggttt taatactatc gattgttcca
+     2641 acttcaaaat tttcgtccag aacattttct tcttccattg cagcattaat tcctaaaata
+     2701 aacgtcacga tatgcggcgt agtattaaag aaagcaagat gccgttttaa agctgccgcc
+     2761 atctcttctt tttgaggata taatttcttt aaaataggga tcatggcata gacataagcc
+     2821 atattcatct gacgttcata attccatgaa aattccattt gaaatgaacg ccaaaagact
+     2881 tgattaagtt ctttttttgt aattaagttt tctgtcttag ttttagaagt cttcgtcatc
+     2941 atcaattacc tccccacttg ttgtttgtat tgtttcattc tttcctttgg cataattcat
+     3001 gatattcaca acaattactg ctgtaatggc acccaaaatt gctactcctg ttacaggtaa
+     3061 cttaaagtag gccattaaga caaagcctaa aaagaaatat ggcgctactt gtttgttaat
+     3121 cagtaagcgt gcaagcatcg caaatcctag cgctggaata attcccgttg caacagacaa
+     3181 cccatgttga ataaattcag ggatcagatc aagtaagcct ttaatggtgt tgctacccac
+     3241 ggcaaatgaa atagttacaa tgagcgctag catgaacgat aagccaaagc ctgcaagtaa
+     3301 atgcatgcgc tccacccctt tatatgctcc ttcttcagca tactgatcag ctttttgact
+     3361 catgattggg atgagcaaac ccaaataaat atttttaaga atcaacgtta acgttgcgat
+     3421 tggcaagcct aagactaagg ctgtttctgt tcctgcgcca gcagtaatag caaacgctgt
+     3481 accaagaatc ccaccagtca ctacatcagg tgggattgat gcgcccactg aaaaagaacc
+     3541 gatgaaagct aactctaagg tcgcgcccat gattacgccc gttttaacat cacctaatac
+     3601 aattccgaca aataaaccgg ttacaattgg tcttgaaagc aacgaggtac ctaaagcata
+     3661 ttccgactgc gcaataaaag cgatgcaacc taaaagaatc gcttgtccta tcatttgtat
+     3721 ttctcctttc tacaagacat ttaatgctgc tacttttttg tcatttggga cttgtcgaat
+     3781 ttcaacttca caaccatttg cgaccaattc tttaaccatt ttttcttcat ccggcgtaat
+     3841 attaattgct ttagaaatgt ttcgagtatt ttcccttact ttcatccctc ctaagttaat
+     3901 ttcttttatt tctggataag cagtagccaa tcgataagca tcttccacac tctcaactac
+     3961 aataaaaagt ttgtattttt ctgtaacacc actttttagt gcggcaatcg catcttcaat
+     4021 cgttttaatg accagtttta ctcctgctgg tttagctagc ttaatggttg tttttcgaat
+     4081 atcattttta ggtacgtcat catttgcgat taaaatacaa tcggcgccta agccttgggt
+     4141 ccatgaaaaa gccacttgac catgtaacaa gcgatgatcg actcttaaca atttaatcat
+     4201 ttcatttcct cctaaaattc ttcttctaaa atttctttac tagataactc attacaataa
+     4261 caaagacttt cttgtccgtt ttcaacggca cgttttacta aatcaactaa tgaatcaaca
+     4321 gtatttattt gggtatatat ttcaattaac gttgctaaat ttagtcctga aattaaatgc
+     4381 attgcttgtt tccccacata attaaagaat tcgttattca cgcttccgcc aaataggtct
+     4441 gtaatcacaa ttaattcatt ttgttgattg ttctttaaaa tgtctttgac cgtcttggct
+     4501 aaatcataag gttgttccat ataagcgcaa agacattcca cattctttgt ttcaccacaa
+     4561 attaaagcta atgatgtctg aatccctgca gcgaaattac catgtgttgc cagaataatt
+     4621 ttacgttcca ttttcttcac ctcacttact tctttatata gcaaaaagag tgccaaaaaa
+     4681 gtggcactcc ctccttttta ttttaaaaat cgctttctgc gttgttaaac tccgtttttc
+     4741 caaacaacac atcatagaca taaaaaagct ccgattcagg tatattgaca ctataaactt
+     4801 tttcaatgac actaaacgcc tcttttaact cttgcaagac cgttctttga cactgcttta
+     4861 gttgttcggc gccattataa ttttcaatag gttcattccg gattaatcgt tcaattaaac
+     4921 aactgacatg gacgtatacc gctaatttac gatcattttg aattgtttgt tgccaccgct
+     4981 cttctaattg aattaaaaag acttctactt gtcgaataat tttttctgta tctaaaatcg
+     5041 tcactgattg aatgacccga tctaatgaaa agttacgaat caactcatga tttacatagg
+     5101 acagcatatc tttagttaat tctctctttg tccattctaa aagggtcgta attccttttc
+     5161 ctgcaatcaa ctcttctaaa gagatatacg ggaggtcatt tgaagacggg ttgtttgtac
+     5221 cgatgatgcc gacaatctca tattctggaa aactttcttt gatcgactct gcattacgta
+     5281 attgattata ttcgcaagga ataatcttta attgtgcttc cgcaggtaaa cttttttcaa
+     5341 gtaaatctct aattttaacg gctgtgccaa ttccggtact acacgttgtt aaaatgacac
+     5401 gttccgtttt attttcaggt aatatgattt cccattcatt tggatgaact gttaacgctt
+     5461 tttggggcaa ttcttcaaaa gaaacttcgt ctttaatggc ttctcctata gacagagcta
+     5521 agcttgttgt cacattattc attaataaaa aaggaccttc ttcttctgcc ggaaaatact
+     5581 gataaatttc tttcaatgaa cccatatcaa aaagaattac taaaccattc ctcgtttctt
+     5641 gacgttccat atagtgaatt aagtgttcgg aaattttttt gggagtaaca tctaacggca
+     5701 tgtcaaacga ttgaaaaatt ggcacattta acagccgatt tgcaacattc gcaatactac
+     5761 ttgctgtggc atatccgtgg gcaacaatca ccgctttcgg atagtgactt tcctttactg
+     5821 aacccgaata gtgaagataa atggtgacaa taattcgatc catctgggat agttcaatat
+     5881 ctaatgaacg tttcactaaa gttaacagtt gttcagcgta gccataacta gttgctaatt
+     5941 tagtttgaac ttctgttaaa agttcgtcaa tgactgttgt aggttctttt tctggaaacc
+     6001 aatcaataca tcttcgttga aacagatagg tgcttaatgc atagactaaa ctgccattaa
+     6061 accgaatttg ataagacgat tcaatcgttt ccaataattg acggatattt tgcgtaataa
+     6121 acaatagcat ttcgtgcttt ttctctcgct tcttttcaaa taataaatca tcgaataagc
+     6181 gttcaatttc tttcgagatg tcgttattag cagtggaaag atgatgatgg tgagagacat
+     6241 aaagacgaag gattcgttca taactctgga taattcttct ttgcgcaagc tctgtttcct
+     6301 ctaacaaact aaccagattt gtttgctcat ctaaacgaat aggcaatcca ttttcatcag
+     6361 gagctagttt gattgattga tccagaaatt ctttcggtag atcgtgtaaa gtgattggaa
+     6421 taacacgttt atcaagattg gcggcaaagc tgcgtgcagt aataattttt atattatttc
+     6481 ttaattcacc tacattgcct acataatggt ggttttctaa aagttggata acttgtggcg
+     6541 tgatagtaac tgctttttga atagcttgct gttcctcata aaatgctcgc ataattaatt
+     6601 gttttctttc cgcttgagtg cgttcagcaa gacttgggat tttaatttga ataggaattc
+     6661 gtcttaaaaa tgtcgttaaa aaggtgctag aaatttcttc agttgtggca aagcacaacc
+     6721 gacacgtaac aggaatgggc cgattggttt cacccatccg ataaatgata ccttgatcta
+     6781 atttttcctg cccttcagga ctcaaacgat gaacttcatc taaaaataaa acgccccctt
+     6841 ctgcactttg aaaggctcca attttatcgg aatctgctcc cgtaaaagcg cctttaagat
+     6901 gcccaaataa ttgactagtt aaaagctctg gattgttggc atattgcgca caattaactg
+     6961 tcacaaaagg tgctgaatcg tcaagtagtt cttttgaaag acaaaactga taatataagg
+     7021 atgctaaaaa acttttaccc gtaccacttt cacctgtaat taagacaggc aagccaccgc
+     7081 caggataaag cgctgccatt ttcaattgtt cgatggtctg agctaaacta ccgcgataac
+     7141 caatgaccga ctgaaaaaaa tcacttttgc gatcaaaaac aggctgttca tcgatcattt
+     7201 cttggaaact ttgataaaca gttcttttta aaagatagtt ttgttgttga aacgcttctt
+     7261 tatgaaaaaa gtaaactggt cgtgtattga tcttaactag aatcccttct tcgtttaact
+     7321 gatttaaata gtgactagct gtatttcgtt tgatagaaaa tgtcgttgca atattgcttg
+     7381 ctgtgaaaat ttcactgact aaagatggtt caaaaaaagc tgtttgattg cgtaaataat
+     7441 caacaatttg catttttaac ataaaatcac ctctcgttta tcataacgta cctaaaaaaa
+     7501 acgtcaatat tcaaaatttc ttttgttatt tttctttata taaggagccc attttttatg
+     7561 ttatttaatc acaggaacct gattctatca ttgcagaata ggctttcatt cagtatactg
+     7621 taaatagagg aacaagaaac gaattggata attaggcact gaaagaacgc accaccgttc
+     7681 tgaatgtttc gaaacacaca acaggttatc gaaatggcca ttggagaaaa attccttttt
+     7741 ctccgaggtt agcgattgtg acatgttgca atcgtttttt gtccttaaaa tgttgagaaa
+     7801 aagaaaaaag gcactttgca tgtcagcacc acctgacaaa caaagccctt catagacagc
+     7861 acaacctatc tattccagtt gccttttttg ctagttacac tagctaattt tagtgtacct
+     7921 gattttcagt gaaattacta gcatctttaa aatttttact gaaacgatca gcctgtgcaa
+     7981 tgaactagtt ttcttcagcg gcggcaaccg ctgagaagct ttttctcaaa t
+//
