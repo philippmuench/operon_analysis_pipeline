@@ -220,28 +220,37 @@ def plot_focus_codons(records: List[CodonSummary], alignment: MultipleSeqAlignme
     if not focus_codons:
         return
 
-    record_lookup = {rec.codon_index: rec for rec in records}
     output_dir.mkdir(parents=True, exist_ok=True)
     example_dir = output_dir / 'examples'
     example_dir.mkdir(parents=True, exist_ok=True)
     window_dir = output_dir / 'windows'
     window_dir.mkdir(parents=True, exist_ok=True)
     palette = plt.get_cmap('tab20')
+    total_codons = alignment.get_alignment_length() // 3
 
     for codon_idx in focus_codons:
-        rec = record_lookup.get(int(codon_idx))
-        if rec is None:
-            print(f'[warning] Focus codon {codon_idx} not found for {gene}')
+        idx = int(codon_idx)
+        if idx < 1 or idx > total_codons:
+            print(f'[warning] Focus codon {idx} out of range for {gene} (1-{total_codons})')
             continue
 
-        items = sorted(rec.codon_counts.items(), key=lambda kv: (-kv[1], kv[0]))
-        aas = [GENETIC_CODE[codon] for codon, _ in items]
-        unique_aas = list(dict.fromkeys(aas))
+        stats = compute_codon_stats(alignment, idx)
+        codon_counts = stats['codon_counts']
+        if not codon_counts:
+            print(f'[warning] Focus codon {idx} has no high-quality bases for {gene}')
+            continue
+
+        if stats['category'] == 'invariant':
+            print(f'[info] Focus codon {idx} is invariant for {gene}; generating context plots.')
+
+        items = sorted(codon_counts.items(), key=lambda kv: (-kv[1], kv[0]))
+        aa_counts = stats['aa_counts']
+        unique_aas = sorted(aa_counts, key=lambda aa: (-aa_counts[aa], aa))
         aa_colors = {aa: palette(i % palette.N) for i, aa in enumerate(unique_aas)}
 
-        plot_alignment_examples(alignment, codon_idx, items, aa_colors, gene,
+        plot_alignment_examples(alignment, idx, items, aa_colors, gene,
                                  example_dir, max_examples)
-        plot_codon_window_heatmap(alignment, codon_idx, gene, window_dir,
+        plot_codon_window_heatmap(alignment, idx, gene, window_dir,
                                   window_size)
 
 
@@ -752,13 +761,18 @@ def main() -> None:
         df.to_csv(table_path, index=False)
         print(f'[done] Wrote codon table for {gene} -> {table_path}')
 
+        total_codons = alignment.get_alignment_length() // 3
         highlight_ranges = []
         if args.focus_codons:
             for codon in args.focus_codons:
-                if (df['codon_index'] == codon).any():
-                    start = max(1, codon - args.window_size)
-                    end = codon + args.window_size
-                    highlight_ranges.append((start - 0.5, end + 0.5))
+                try:
+                    idx = int(codon)
+                except (TypeError, ValueError):
+                    print(f'[warning] Skipping non-integer focus codon {codon!r} for {gene}')
+                    continue
+                start = max(1, idx - args.window_size)
+                end = min(total_codons, idx + args.window_size)
+                highlight_ranges.append((start - 0.5, end + 0.5))
 
         plot_gene(df, gene, args.output_dir / 'plots', highlight_ranges if highlight_ranges else None)
         plot_amino_acid_diversity(records, gene, args.output_dir / 'plots')
