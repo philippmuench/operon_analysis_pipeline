@@ -7,6 +7,12 @@
 *.log
 *.out
 *.err
+13e_full_operon_mapping/output_full_run/full_operon_mapping.tsv
+13e_full_operon_mapping/output_preview/full_operon_mapping.tsv
+!13e_full_operon_mapping/output_full_run/manuscript_numbers.txt
+!13e_full_operon_mapping/output_full_run/summary.txt
+13e_full_operon_mapping/output_full_run/position_stats/plots/
+13e_full_operon_mapping/output_full_run/raw_blast/
 
 # Specifically ignore the metadata file with sensitive information
 00_annotation/8587_Efs_metadata_ASbarcode.txt

@@ -49,6 +49,65 @@ class MappingResult:
     updated_hit: Optional[BlastHit]
 
 
+def init_counts(length: int) -> Dict[str, List[int]]:
+    return {
+        "coverage": [0] * (length + 1),
+        "mismatch": [0] * (length + 1),
+        "deletion": [0] * (length + 1),
+    }
+
+
+def ensure_counts(counts: Optional[Dict[str, List[int]]], length: int) -> Dict[str, List[int]]:
+    if counts is None:
+        return init_counts(length)
+    needed = length + 1 - len(counts["coverage"])
+    if needed > 0:
+        for key in counts:
+            counts[key].extend([0] * needed)
+    return counts
+
+
+def accumulate_counts(hit: BlastHit, counts: Dict[str, List[int]]):
+    qpos = hit.qstart
+    step = 1 if hit.qend >= hit.qstart else -1
+
+    for q_char, s_char in zip(hit.qseq.upper(), hit.sseq.upper()):
+        if q_char != "-":
+            if s_char == "-":
+                counts["coverage"][qpos] += 1
+                counts["deletion"][qpos] += 1
+            else:
+                counts["coverage"][qpos] += 1
+                if q_char != s_char:
+                    counts["mismatch"][qpos] += 1
+            qpos += step
+
+
+def build_position_table(counts: Optional[Dict[str, List[int]]], reference_seq: str) -> pd.DataFrame:
+    if counts is None:
+        return pd.DataFrame()
+
+    length = len(reference_seq)
+    data = {
+        "position": list(range(1, length + 1)),
+        "reference_base": list(reference_seq.upper()[:length]),
+        "coverage": counts["coverage"][1 : length + 1],
+        "mismatch_count": counts["mismatch"][1 : length + 1],
+        "deletion_count": counts["deletion"][1 : length + 1],
+    }
+
+    df = pd.DataFrame(data)
+    df["mismatch_rate"] = df.apply(
+        lambda row: row["mismatch_count"] / row["coverage"] if row["coverage"] > 0 else 0.0,
+        axis=1,
+    )
+    df["deletion_rate"] = df.apply(
+        lambda row: row["deletion_count"] / row["coverage"] if row["coverage"] > 0 else 0.0,
+        axis=1,
+    )
+    return df
+
+
 def alignment_stats(hit: Optional[BlastHit]) -> Dict[str, Optional[str]]:
     if not hit:
         return {
@@ -117,7 +176,7 @@ def ensure_uncompressed(path: Path) -> Path:
     return path
 
 
-def run_blast(query: Path, subject: Path, threads: int) -> List[BlastHit]:
+def run_blast(query: Path, subject: Path, threads: int, raw_output: Optional[Path] = None) -> List[BlastHit]:
     subject_path = ensure_uncompressed(subject)
     cmd = [
         "blastn",
@@ -137,6 +196,11 @@ def run_blast(query: Path, subject: Path, threads: int) -> List[BlastHit]:
     finally:
         if subject_path is not subject:
             subject_path.unlink(missing_ok=True)
+
+    if raw_output:
+        raw_output.parent.mkdir(parents=True, exist_ok=True)
+        raw_output.write_text(result.stdout)
+
     hits: List[BlastHit] = []
     for line in result.stdout.strip().splitlines():
         parts = line.split("\t")
@@ -186,6 +250,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-assemblies", type=int, help="Optional limit for number of assemblies to scan")
     parser.add_argument("--min-coverage", type=float, default=80.0)
     parser.add_argument("--min-identity", type=float, default=90.0)
+    parser.add_argument("--save-raw", action="store_true", help="Persist raw BLAST tabular output for each assembly")
+    parser.add_argument("--raw-dir", type=Path, default=Path("raw_blast"), help="Directory to store raw BLAST output when --save-raw is set")
     return parser.parse_args()
 
 
@@ -204,13 +270,38 @@ def main() -> None:
         assemblies = assemblies[: args.max_assemblies]
 
     results: List[MappingResult] = []
+    legacy_counts: Optional[Dict[str, List[int]]] = None
+    updated_counts: Optional[Dict[str, List[int]]] = None
+    raw_legacy_dir = raw_updated_dir = None
+    if args.save_raw:
+        raw_base = args.output / args.raw_dir
+        raw_legacy_dir = raw_base / "legacy"
+        raw_updated_dir = raw_base / "updated"
+
     for idx, assembly in enumerate(assemblies, 1):
         print(f"[{idx}/{len(assemblies)}] Processing {assembly.name}")
-        legacy_hits = run_blast(legacy_query, assembly, args.threads)
-        updated_hits = run_blast(updated_query, assembly, args.threads)
+        legacy_hits = run_blast(
+            legacy_query,
+            assembly,
+            args.threads,
+            raw_output=(raw_legacy_dir / f"{assembly.name}.tsv") if raw_legacy_dir else None,
+        )
+        updated_hits = run_blast(
+            updated_query,
+            assembly,
+            args.threads,
+            raw_output=(raw_updated_dir / f"{assembly.name}.tsv") if raw_updated_dir else None,
+        )
         legacy_hit = next((h for h in legacy_hits if h.coverage >= args.min_coverage and h.pident >= args.min_identity), None)
         updated_hit = next((h for h in updated_hits if h.coverage >= args.min_coverage and h.pident >= args.min_identity), None)
         results.append(MappingResult(assembly=assembly, legacy_hit=legacy_hit, updated_hit=updated_hit))
+
+        if legacy_hit:
+            legacy_counts = ensure_counts(legacy_counts, legacy_hit.qlen)
+            accumulate_counts(legacy_hit, legacy_counts)
+        if updated_hit:
+            updated_counts = ensure_counts(updated_counts, updated_hit.qlen)
+            accumulate_counts(updated_hit, updated_counts)
 
     # cleanup temp queries
     legacy_query.unlink(missing_ok=True)
@@ -246,6 +337,14 @@ def main() -> None:
     df = pd.DataFrame(rows)
     table_path = args.output / "full_operon_mapping.tsv"
     df.to_csv(table_path, sep="\t", index=False)
+
+    legacy_position = build_position_table(legacy_counts, legacy_seq)
+    if not legacy_position.empty:
+        legacy_position.to_csv(args.output / "legacy_position_summary.tsv", sep="\t", index=False)
+
+    updated_position = build_position_table(updated_counts, updated_seq)
+    if not updated_position.empty:
+        updated_position.to_csv(args.output / "updated_position_summary.tsv", sep="\t", index=False)
 
     summary = summarise_results(results)
     summary_path = args.output / "summary.txt"

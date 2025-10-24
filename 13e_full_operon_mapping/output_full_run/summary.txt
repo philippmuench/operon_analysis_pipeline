@@ -1,0 +1,9 @@
+Full operon mapping summary
+===========================
+Legacy GB: ../02_reference_operon_extraction/operon.gb
+Updated GB: ../13a_new_reference_operon_extraction/FL_operon_with_SNPs.gb
+Assemblies scanned: 8587
+Legacy hits (>= 90.0% id, >= 80.0% cov): 8210
+Updated hits (>= 90.0% id, >= 80.0% cov): 8210
+Legacy high-quality hits (>=95/95): 8149
+Updated high-quality hits (>=95/95): 8149

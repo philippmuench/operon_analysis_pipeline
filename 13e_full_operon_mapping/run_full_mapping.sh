@@ -21,5 +21,5 @@ python compare_full_operon_mapping.py \
     --threads "$SLURM_CPUS_PER_TASK" \
     --output output_full_run \
     --min-coverage 80 \
-    --min-identity 90
-
+    --min-identity 90 \
+    --save-raw

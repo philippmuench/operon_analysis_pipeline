@@ -1,0 +1,7 @@
+dataset	metric	mean	median
+legacy	coverage	8206.26862162831	8210.0
+legacy	mismatch_rate	0.007258143318866478	0.0
+legacy	deletion_rate	3.274201684762729e-05	0.0
+updated	coverage	8206.252895031752	8210.0
+updated	mismatch_rate	0.00728022670416869	0.0
+updated	deletion_rate	3.294994149701454e-05	0.0

@@ -1,0 +1,34 @@
+Full operon mapping summary
+============================
+Total Assemblies: 8587
+Legacy Hits: 8210
+Updated Hits: 8210
+Both Hits: 8210
+Legacy Only: 0
+Updated Only: 0
+No Hits: 377
+
+High-quality hits (>=95% identity and coverage)
+  Legacy: 8149
+  Updated: 8149
+
+Identity/Coverage deltas for assemblies with hits in both references
+  Mean identity delta (updated - legacy): -0.0032
+  Mean coverage delta (updated - legacy): 0.0008
+  Min identity delta: -0.0090
+  Max identity delta: 0.0200
+
+Top positions by updated mismatch rate
+  Pos 2090: ref=T coverage=8210 mismatch_rate=0.9949
+  Pos 7920: ref=C coverage=8147 mismatch_rate=0.9947
+  Pos 6773: ref=C coverage=8210 mismatch_rate=0.9856
+  Pos 4364: ref=A coverage=8210 mismatch_rate=0.9855
+  Pos 4934: ref=T coverage=8210 mismatch_rate=0.9838
+
+Mean mismatch/deletion rates (legacy):
+  Mismatch rate: 0.007258
+  Deletion rate: 0.000033
+
+Mean mismatch/deletion rates (updated):
+  Mismatch rate: 0.007280
+  Deletion rate: 0.000033
