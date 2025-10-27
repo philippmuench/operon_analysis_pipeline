@@ -1,34 +1,51 @@
 Full operon mapping summary
 ============================
-Total Assemblies: 8587
-Legacy Hits: 8210
-Updated Hits: 8210
-Both Hits: 8210
-Legacy Only: 0
-Updated Only: 0
-No Hits: 377
+Assemblies scanned: 8587
+Legacy hits (>= 90% identity, >= 80% coverage): 8210
+Updated hits (>= 90% identity, >= 80% coverage): 8210
+Hits in both references: 8210
+Legacy-only hits: 0
+Updated-only hits: 0
+Assemblies without hits: 377
 
-High-quality hits (>=95% identity and coverage)
+High-quality hits (>= 95% identity and coverage)
   Legacy: 8149
   Updated: 8149
 
-Identity/Coverage deltas for assemblies with hits in both references
-  Mean identity delta (updated - legacy): -0.0032
-  Mean coverage delta (updated - legacy): 0.0008
-  Min identity delta: -0.0090
-  Max identity delta: 0.0200
+Identity deltas (updated - legacy, hits in both references)
+  Mean: -0.0032
+  Min: -0.0090
+  Max: 0.0200
 
-Top positions by updated mismatch rate
-  Pos 2090: ref=T coverage=8210 mismatch_rate=0.9949
-  Pos 7920: ref=C coverage=8147 mismatch_rate=0.9947
-  Pos 6773: ref=C coverage=8210 mismatch_rate=0.9856
-  Pos 4364: ref=A coverage=8210 mismatch_rate=0.9855
-  Pos 4934: ref=T coverage=8210 mismatch_rate=0.9838
+Coverage deltas (updated - legacy, hits in both references)
+  Mean: 0.0008
+  Min: -0.0701
+  Max: 0.0257
 
-Mean mismatch/deletion rates (legacy):
-  Mismatch rate: 0.007258
-  Deletion rate: 0.000033
+Mean mismatch/deletion rates
+  Legacy mismatch rate: 0.007258
+  Legacy deletion rate: 0.000033
+  Updated mismatch rate: 0.007280
+  Updated deletion rate: 0.000033
 
-Mean mismatch/deletion rates (updated):
-  Mismatch rate: 0.007280
-  Deletion rate: 0.000033
+Top updated-reference mismatch positions (by mismatch rate)
+  Pos 2090 (ref=T): coverage=8210 mismatch_rate=0.9949
+  Pos 7920 (ref=T): coverage=8147 mismatch_rate=0.9947
+  Pos 6773 (ref=T): coverage=8210 mismatch_rate=0.9856
+  Pos 4364 (ref=G): coverage=8210 mismatch_rate=0.9855
+  Pos 4934 (ref=G): coverage=8210 mismatch_rate=0.9838
+
+Variant loci summarised in tables.md
+  Sites tracked: 8
+  Assemblies contributing allele calls per site: 8586
+  Sites with non-zero variant support: 3
+  Maximum variant count across sites: 26
+  Variant allele counts:
+    859 (G->A): 3/8586 (0.0349%)
+    2155 (C->A): 0/8586 (0.0000%)
+    3455 (G->T): 1/8586 (0.0116%)
+    3568 (C->G): 0/8586 (0.0000%)
+    4652..4653 (CT->TG): 0/8586 (0.0000%)
+    4659 (T->A): 0/8586 (0.0000%)
+    4673 (C->G): 0/8586 (0.0000%)
+    7501^7502 (absent->A): 26/8586 (0.3028%)
