@@ -14,6 +14,8 @@
 13e_full_operon_mapping/output_full_run/position_stats/plots/*
 !13e_full_operon_mapping/output_full_run/position_stats/plots/legacy_deletion_rate.png
 !13e_full_operon_mapping/output_full_run/position_stats/plots/legacy_mismatch_rate.png
+!13e_full_operon_mapping/output_full_run/position_stats/plots/legacy_coverage.png
+!13e_full_operon_mapping/output_full_run/position_stats/plots/updated_coverage.png
 !13e_full_operon_mapping/output_full_run/position_stats/plots/plot.md
 13e_full_operon_mapping/output_full_run/raw_blast/
 13e_full_operon_mapping/output_full_run/position_stats/variation_windows/

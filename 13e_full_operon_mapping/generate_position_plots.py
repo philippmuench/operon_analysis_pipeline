@@ -86,8 +86,13 @@ def line_plot(
     if ylim is not None:
         plt.ylim(*ylim)
 
+    ax = plt.gca()
+    if not df.empty:
+        x_min = float(df["position"].min())
+        x_max = float(df["position"].max())
+        ax.set_xlim(x_min, x_max)
+
     if spans:
-        ax = plt.gca()
         y_min, y_max = ax.get_ylim()
         y_text = y_max - (y_max - y_min) * 0.05
         for span in spans:
@@ -117,6 +122,7 @@ def zoom_plot(
     spans: Optional[List[Dict[str, float]]] = None,
     color: str = "black",
     margin: int = 50,
+    ylim: Optional[tuple[float, float]] = None,
 ):
     mask = df[column] > threshold_pct
     if not mask.any():
@@ -136,6 +142,7 @@ def zoom_plot(
         path=path,
         spans=[span for span in (spans or []) if span["end"] >= min_clip and span["start"] <= max_clip],
         color=color,
+        ylim=ylim,
     )
 
 
