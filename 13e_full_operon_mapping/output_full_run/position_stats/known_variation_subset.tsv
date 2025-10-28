@@ -1,0 +1,11 @@
+position	coverage_legacy	mismatch_count_legacy	deletion_count_legacy	mismatch_rate_legacy	deletion_rate_legacy	coverage_updated	mismatch_count_updated	deletion_count_updated	mismatch_rate_updated	deletion_rate_updated	reference_base	feature_gene	feature_locus_tag	feature_product	feature_type	feature_start	feature_end	feature_strand	feature_position	feature_codon	known_variation
+859	8210	0	0	0.0	0.0	8210.0	3.0	0.0	0.0003654080389768	0.0	A	frpC	fl_operon_CDS_1	fructoselysine-6-phosphate deglycase	CDS	24.0	1028.0	-1.0	170.0	57.0	A
+2155	8210	1	0	0.0001218026796589	0.0	8210.0	0.0	0.0	0.0	0.0	C	ptsD	fl_operon_CDS_3	PTS system mannose/fructose/sorbose family IID component	CDS	2109.0	2942.0	-1.0	788.0	263.0	A
+3455	8210	1	0	0.0001218026796589	0.0	8210.0	1.0	0.0	0.0001218026796589	0.0	A	ptsC	fl_operon_CDS_4	PTS system sorbose-specific IIC component	CDS	2923.0	3714.0	-1.0	260.0	87.0	T
+3568	8210	0	0	0.0	0.0	8210.0	0.0	0.0	0.0	0.0	G	ptsC	fl_operon_CDS_4	PTS system sorbose-specific IIC component	CDS	2923.0	3714.0	-1.0	147.0	49.0	G
+4652	8210	0	0	0.0	0.0	8210.0	0.0	0.0	0.0	0.0	A	ptsA	fl_operon_CDS_6	PTS system fructose IIA component	CDS	4212.0	4676.0	-1.0	25.0	9.0	TG
+4653	8210	0	0	0.0	0.0	8210.0	0.0	0.0	0.0	0.0	T	ptsA	fl_operon_CDS_6	PTS system fructose IIA component	CDS	4212.0	4676.0	-1.0	24.0	8.0	TG
+4659	8210	0	0	0.0	0.0	8210.0	1.0	0.0	0.0001218026796589	0.0	G	ptsA	fl_operon_CDS_6	PTS system fructose IIA component	CDS	4212.0	4676.0	-1.0	18.0	6.0	A
+4673	8210	1	0	0.0001218026796589	0.0	8210.0	0.0	0.0	0.0	0.0	A	ptsA	fl_operon_CDS_6	PTS system fructose IIA component	CDS	4212.0	4676.0	-1.0	4.0	2.0	G
+7501	8208	25	0	0.0030458089668615	0.0	8208.0	0.0	297.0	0.0	0.0361842105263157	C										
+7502	8208	5674	0	0.6912768031189084	0.0	8208.0	3.0	0.0	0.0003654970760233	0.0	A										

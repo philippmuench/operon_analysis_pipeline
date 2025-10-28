@@ -35,6 +35,7 @@ def init_counts(length: int) -> Dict[str, List[int]]:
         "coverage": [0] * (length + 1),
         "mismatch": [0] * (length + 1),
         "deletion": [0] * (length + 1),
+        "insertion": [0] * (length + 1),
     }
 
 
@@ -51,8 +52,18 @@ def ensure_counts(counts: Optional[Dict[str, List[int]]], length: int) -> Dict[s
 def accumulate_counts(hit: BlastAlignment, counts: Dict[str, List[int]]):
     qpos = hit.qstart
     step = 1 if hit.qend >= hit.qstart else -1
+    max_index = len(counts["coverage"]) - 1
 
     for q_char, s_char in zip(hit.qseq.upper(), hit.sseq.upper()):
+        if q_char == "-" and s_char != "-":
+            target = qpos - step
+            if target < 1:
+                target = 1
+            elif target > max_index:
+                target = max_index
+            counts["insertion"][target] += 1
+            continue
+
         if q_char != "-":
             if s_char == "-":
                 counts["coverage"][qpos] += 1
@@ -75,6 +86,7 @@ def build_position_table(counts: Optional[Dict[str, List[int]]], reference_seq: 
         "coverage": counts["coverage"][1 : length + 1],
         "mismatch_count": counts["mismatch"][1 : length + 1],
         "deletion_count": counts["deletion"][1 : length + 1],
+        "insertion_count": counts["insertion"][1 : length + 1],
     }
 
     df = pd.DataFrame(data)
@@ -84,6 +96,10 @@ def build_position_table(counts: Optional[Dict[str, List[int]]], reference_seq: 
     )
     df["deletion_rate"] = df.apply(
         lambda row: row["deletion_count"] / row["coverage"] if row["coverage"] > 0 else 0.0,
+        axis=1,
+    )
+    df["insertion_rate"] = df.apply(
+        lambda row: row["insertion_count"] / row["coverage"] if row["coverage"] > 0 else 0.0,
         axis=1,
     )
     return df
@@ -159,9 +175,19 @@ def summarise_counts(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
     return pd.DataFrame(
         {
-            "metric": ["coverage", "mismatch_rate", "deletion_rate"],
-            "mean": [df["coverage"].mean(), df["mismatch_rate"].mean(), df["deletion_rate"].mean()],
-            "median": [df["coverage"].median(), df["mismatch_rate"].median(), df["deletion_rate"].median()],
+            "metric": ["coverage", "mismatch_rate", "deletion_rate", "insertion_rate"],
+            "mean": [
+                df["coverage"].mean(),
+                df["mismatch_rate"].mean(),
+                df["deletion_rate"].mean(),
+                df["insertion_rate"].mean(),
+            ],
+            "median": [
+                df["coverage"].median(),
+                df["mismatch_rate"].median(),
+                df["deletion_rate"].median(),
+                df["insertion_rate"].median(),
+            ],
         }
     )
 
