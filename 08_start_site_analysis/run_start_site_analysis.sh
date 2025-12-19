@@ -23,10 +23,10 @@ eval "$(/home/pmuench/miniconda3/bin/conda shell.bash hook)"
 conda activate efs_diversity
 echo "Conda environment activated: $CONDA_DEFAULT_ENV"
 
-PROKKA_DIR="../01_prokka_annotation/output/prokka_results"
+PROKKA_DIR="../prokka_output"
 GENE_FASTA="../02_reference_operon_extraction/output/operon_genes_nt.fasta"
 OUT_DIR="./output"
-METADATA_FILE="../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+METADATA_FILE="../00_annotation/202251215_metadata_8573strains_23Isolates.txt"
 
 mkdir -p "$OUT_DIR"
 

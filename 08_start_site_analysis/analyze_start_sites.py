@@ -72,7 +72,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max_workers", type=int, default=8, help="Parallel workers")
     parser.add_argument("--genome_list", help="Optional file with genome IDs to analyze (one per line)")
     parser.add_argument("--blast_dir", help="Optional BLAST results directory to anchor gene coordinates (recommended)")
-    parser.add_argument("--metadata", default="../00_annotation/8587_Efs_metadata_ASbarcode.txt", 
+    parser.add_argument("--metadata", default="../00_annotation/202251215_metadata_8573strains_23Isolates.txt",
                        help="Optional metadata file for stratification analysis")
     parser.add_argument("--visualize-only", action="store_true",
                        help="Only create visualizations from existing results")
@@ -539,8 +539,8 @@ def stratify_by_metadata(tsv_path: str, metadata_path: str, output_dir: str) -> 
     output_lines.append("-"*40)
     
     niche_results = []
-    for niche in sorted(merged_df['Source Niche'].unique()):
-        if pd.isna(niche) or niche == 'ND':
+    for niche in sorted(merged_df['Source Niche'].dropna().unique()):
+        if niche == 'ND':
             continue
         niche_df = merged_df[merged_df['Source Niche'] == niche]
         total = len(niche_df)
@@ -574,8 +574,8 @@ def stratify_by_metadata(tsv_path: str, metadata_path: str, output_dir: str) -> 
     
     ptsa_df = merged_df[merged_df['gene'] == 'ptsA']
     ptsa_results = []
-    for niche in sorted(ptsa_df['Source Niche'].unique()):
-        if pd.isna(niche) or niche == 'ND':
+    for niche in sorted(ptsa_df['Source Niche'].dropna().unique()):
+        if niche == 'ND':
             continue
         niche_ptsa = ptsa_df[ptsa_df['Source Niche'] == niche]
         total = len(niche_ptsa)
@@ -696,16 +696,20 @@ def create_stratification_plots(output_dir: str) -> None:
     
     # 2. Create individual gene plots by source niche
     summary_file = os.path.join(output_dir, "start_site_summary.tsv")
-    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+    metadata_file = "../00_annotation/202251215_metadata_8573strains_23Isolates.txt"
     
     if Path(summary_file).exists() and Path(metadata_file).exists():
         print("Creating individual gene plots by source niche...")
         summary_df = pd.read_csv(summary_file, sep='\t')
         metadata_df = pd.read_csv(metadata_file, sep='\t')
-        
+
+        # Normalize column name (AS_Barcode -> AS_barcode)
+        if 'AS_Barcode' in metadata_df.columns:
+            metadata_df = metadata_df.rename(columns={'AS_Barcode': 'AS_barcode'})
+
         # Extract genome ID from file name to match with AS_barcode
         summary_df['AS_barcode'] = summary_df['genome_id'].str.replace('.result', '', regex=False)
-        
+
         # Merge with metadata
         merged_df = summary_df.merge(metadata_df, on='AS_barcode', how='left')
         
@@ -792,16 +796,20 @@ def create_stratification_plots(output_dir: str) -> None:
     
     # 3. Create individual gene plots by country
     summary_file = os.path.join(output_dir, "start_site_summary.tsv")
-    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+    metadata_file = "../00_annotation/202251215_metadata_8573strains_23Isolates.txt"
     
     if Path(summary_file).exists() and Path(metadata_file).exists():
         print("Creating individual gene plots by country...")
         summary_df = pd.read_csv(summary_file, sep='\t')
         metadata_df = pd.read_csv(metadata_file, sep='\t')
-        
+
+        # Normalize column name (AS_Barcode -> AS_barcode)
+        if 'AS_Barcode' in metadata_df.columns:
+            metadata_df = metadata_df.rename(columns={'AS_Barcode': 'AS_barcode'})
+
         # Extract genome ID from file name to match with AS_barcode
         summary_df['AS_barcode'] = summary_df['genome_id'].str.replace('.result', '', regex=False)
-        
+
         # Merge with metadata
         merged_df = summary_df.merge(metadata_df, on='AS_barcode', how='left')
         
@@ -891,7 +899,12 @@ def create_stratification_plots(output_dir: str) -> None:
     if Path(country_file).exists():
         print("Creating overall Country comparison plots...")
         country_df = pd.read_csv(country_file, sep='\t')
-        
+
+        # Ensure all percentage columns exist (default to 0 if missing)
+        for col in ['ATG%', 'GTG%', 'TTG%']:
+            if col not in country_df.columns:
+                country_df[col] = 0.0
+
         # Create figure with multiple subplots
         fig = plt.figure(figsize=(16, 10))
         

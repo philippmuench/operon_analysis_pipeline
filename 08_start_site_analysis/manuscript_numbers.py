@@ -196,10 +196,14 @@ def generate_manuscript_stats(output_file=None):
     output_lines.append("-" * 40)
     
     # Load metadata if available
-    metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+    metadata_file = "../00_annotation/202251215_metadata_8573strains_23Isolates.txt"
     if os.path.exists(metadata_file):
         metadata_df = pd.read_csv(metadata_file, sep='\t')
-        
+
+        # Normalize column name (AS_Barcode -> AS_barcode)
+        if 'AS_Barcode' in metadata_df.columns:
+            metadata_df = metadata_df.rename(columns={'AS_Barcode': 'AS_barcode'})
+
         # Extract genome ID from file name to match with AS_barcode
         df_ptsa = df.copy()
         df_ptsa['AS_barcode'] = df_ptsa['genome_id'].str.replace('.result', '', regex=False)
