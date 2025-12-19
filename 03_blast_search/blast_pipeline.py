@@ -640,8 +640,8 @@ class BlastPipeline:
             'gene': gene_prevalence.index,
             'genomes_with_hit': gene_prevalence.values,
             'genomes_with_hq_hit': hq_counts.values,
-            'prevalence_percent': (gene_prevalence.values / len(genome_ids)) * 100,
-            'hq_prevalence_percent': (hq_counts.values / len(genome_ids)) * 100
+            'prevalence_percent': ((gene_prevalence.values / len(genome_ids)) * 100).round(2),
+            'hq_prevalence_percent': ((hq_counts.values / len(genome_ids)) * 100).round(2)
         })
         gene_prevalence_df = gene_prevalence_df.sort_values('prevalence_percent', ascending=False)
         

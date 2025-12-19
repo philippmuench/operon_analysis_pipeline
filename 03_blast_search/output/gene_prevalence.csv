@@ -1,8 +1,8 @@
 gene,genomes_with_hit,genomes_with_hq_hit,prevalence_percent,hq_prevalence_percent
-operon_CDS_3|ptsD|PTS_system_mannose/fructose/sorbose_family_IID_component,8603,8277,100.0,96.21062420086017
-operon_CDS_4|ptsC|PTS_system_sorbose-specific_IIC_component,8603,8276,100.0,96.19900034871557
-operon_CDS_5|ptsB|PTS_system_sorbose_subfamily_IIB_component,8603,8276,100.0,96.19900034871557
-operon_CDS_6|ptsA|PTS_system_fructose_IIA_component,8603,8276,100.0,96.19900034871557
-operon_CDS_7|fruR|sigma-54_dependent_transcriptional_regulator,8603,8270,100.0,96.12925723584796
-operon_CDS_2|glpC|glucoselysine-6-phosphate_deglycase,8593,8276,99.88376147855399,96.19900034871557
-operon_CDS_1|frpC|fructoselysine-6-phosphate_deglycase,8277,8277,96.21062420086017,96.21062420086017
+operon_CDS_3|ptsD|PTS_system_mannose/fructose/sorbose_family_IID_component,8603,8277,100.0,96.21
+operon_CDS_4|ptsC|PTS_system_sorbose-specific_IIC_component,8603,8276,100.0,96.2
+operon_CDS_5|ptsB|PTS_system_sorbose_subfamily_IIB_component,8603,8276,100.0,96.2
+operon_CDS_6|ptsA|PTS_system_fructose_IIA_component,8603,8276,100.0,96.2
+operon_CDS_7|fruR|sigma-54_dependent_transcriptional_regulator,8603,8270,100.0,96.13
+operon_CDS_2|glpC|glucoselysine-6-phosphate_deglycase,8593,8276,99.88,96.2
+operon_CDS_1|frpC|fructoselysine-6-phosphate_deglycase,8277,8277,96.21,96.21
