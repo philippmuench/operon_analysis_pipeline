@@ -1,9 +1,9 @@
 Core Gene Sequence Extraction Summary
 ==================================================
 
-Total core genes: 1252
-Successfully extracted: 1252
+Total core genes: 1251
+Successfully extracted: 1251
 Failed to extract: 0
-Genomes processed: 8587
+Genomes processed: 8603
 
 Output directory: output/core_gene_sequences

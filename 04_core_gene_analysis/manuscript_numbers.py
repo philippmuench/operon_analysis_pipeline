@@ -153,7 +153,7 @@ def analyze_conservation_metrics():
 
 def count_input_genomes():
     """Count input genomes from Prokka results."""
-    prokka_dir = "../01_prokka_annotation/output/prokka_results"
+    prokka_dir = "../prokka_output"
     if os.path.exists(prokka_dir):
         genome_dirs = glob.glob(os.path.join(prokka_dir, "*/"))
         return len(genome_dirs)
@@ -161,21 +161,23 @@ def count_input_genomes():
 
 def generate_manuscript_stats(output_file=None):
     """Generate all statistics for manuscript.
-    
+
     Args:
         output_file (str): Optional path to save output to file. If None, prints to console.
     """
-    
+    from datetime import datetime
+
     # Collect all output lines
     output_lines = []
-    
+
     def add_line(text=""):
         """Add a line to both console and file output."""
         print(text)
         output_lines.append(text)
-    
+
     add_line("Core Gene Analysis Statistics for Manuscript")
     add_line("=" * 60)
+    add_line(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Input genomes
     input_genomes = count_input_genomes()

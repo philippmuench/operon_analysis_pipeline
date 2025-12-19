@@ -2,8 +2,8 @@ Core Gene Conservation Summary
 ==================================================
 
 Total genes analyzed: 1252
-Average sequences per gene: 8542.8
-Average alignment length: 1169.6 bp
+Average sequences per gene: 8565.7
+Average alignment length: 1170.0 bp
 
 Conservation Statistics:
   Mean conservation: 0.931 ± 0.107
@@ -12,5 +12,5 @@ Conservation Statistics:
   Variable positions: 3.6%
 
 Gap Statistics:
-  Average gaps per position: 703.00
-  Positions with gaps: 52.9%
+  Average gaps per position: 705.73
+  Positions with gaps: 53.2%

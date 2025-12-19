@@ -1004,7 +1004,6 @@ sorA_2
 sorA_3
 sorB_1
 sorB_2
-sorB_3
 sorF
 speG
 sph
