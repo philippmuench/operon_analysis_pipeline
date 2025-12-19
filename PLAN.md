@@ -476,17 +476,17 @@ After all steps complete, collect these statistics:
 - Gene counts will change from 8,587 → 8,601
 
 **From Step 05 (Operon Extraction):**
-Current values → Expected new values:
-- Sequences per gene: ~8,260 → ~8,280+
-- Average sequences per alignment: 8,300 → ~8,320+
-- ptsA genes analyzed: 8,260 → ~8,280+
-- Laboratory strains: n=325 → n=~345+ (23 new isolates may include lab strains)
-- Other niches: n=7,925 → n=~7,950+
+Actual values (Dec 2025):
+- Sequences per gene: ~8,275 average
+- ptsA genes analyzed: 8,167
+- Laboratory strains: n=324
+- Other niches: n=5,703 (with niche data)
 
-**Key Finding to Verify After Re-run:**
-The ptsA laboratory adaptation pattern (TTG→ATG start codon) should remain significant:
-- Current: Laboratory ATG usage 55.1% vs Other 10.9% (p=4.4e-79)
-- Re-run: Verify pattern persists with new genomes
+**Key Finding VERIFIED (Dec 2025):**
+The ptsA laboratory adaptation pattern (TTG→ATG start codon) remains significant:
+- Old (8,587 genomes): Laboratory ATG 55.1% vs Other 10.9% (p=4.4e-79)
+- New (8,603 genomes): Laboratory ATG 60.5% vs Other 21.3% (p=3.15e-50, OR=5.86)
+- ✅ Pattern confirmed: Lab strains 5.9x more likely to use ATG start codon
 
 ### Final Verification Checklist
 
