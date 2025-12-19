@@ -263,7 +263,7 @@ def analyze_ptsa_start_codon_pattern():
     try:
         # Check if the start site analysis has been run
         summary_file = "../08_start_site_analysis/output/start_site_summary.tsv"
-        metadata_file = "../00_annotation/8587_Efs_metadata_ASbarcode.txt"
+        metadata_file = "../00_annotation/202251215_metadata_8573strains_23Isolates.txt"
         
         if not os.path.exists(summary_file):
             return {"error": "Start site analysis not yet run (Step 08)"}

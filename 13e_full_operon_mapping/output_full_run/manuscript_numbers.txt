@@ -1,16 +1,16 @@
 Full operon mapping summary
 ============================
-Assemblies scanned: 8587
-Legacy hits (>= 90% identity, >= 80% coverage): 8210
-Updated hits (>= 90% identity, >= 80% coverage): 8210
-Hits in both references: 8210
+Assemblies scanned: 8603
+Legacy hits (>= 90% identity, >= 80% coverage): 8226
+Updated hits (>= 90% identity, >= 80% coverage): 8226
+Hits in both references: 8226
 Legacy-only hits: 0
 Updated-only hits: 0
 Assemblies without hits: 377
 
 High-quality hits (>= 95% identity and coverage)
-  Legacy: 8149
-  Updated: 8149
+  Legacy: 8165
+  Updated: 8165
 
 Identity deltas (updated - legacy, hits in both references)
   Mean: -0.0032
