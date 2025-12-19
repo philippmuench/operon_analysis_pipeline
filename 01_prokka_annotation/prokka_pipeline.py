@@ -17,17 +17,24 @@ import json
 import numpy as np
 
 class ProkkaPipeline:
-    def __init__(self, test_mode=False):
+    def __init__(self, test_mode=False, genome_list_file=None):
         self.test_mode = test_mode
         self.script_dir = Path(__file__).parent.absolute()
         self.genome_dir = self.script_dir.parent.parent / "Efs_assemblies"
+        self.custom_genome_list = genome_list_file is not None
         
         if test_mode:
             self.output_dir = self.script_dir / "output" / "prokka_results"
-            self.genome_list_file = self.script_dir / "genome_list_test.txt"
         else:
             self.output_dir = self.script_dir.parent / "prokka_output"
-            self.genome_list_file = self.script_dir / "genome_list.txt"
+        
+        if genome_list_file:
+            self.genome_list_file = Path(genome_list_file).expanduser()
+            if not self.genome_list_file.is_absolute():
+                self.genome_list_file = (self.script_dir / self.genome_list_file).resolve()
+        else:
+            default_file = "genome_list_test.txt" if test_mode else "genome_list.txt"
+            self.genome_list_file = self.script_dir / default_file
         
         self.expected_files = ["gff", "faa", "ffn", "fna", "gbk", "log", "txt", "tsv"]
         
@@ -47,12 +54,11 @@ class ProkkaPipeline:
         """Create list of genome files."""
         genome_files = sorted(glob.glob(str(self.genome_dir / "*.fasta.gz")))
         
-        if self.test_mode:
+        if self.test_mode and not self.custom_genome_list:
             # In test mode, only use first 50 genomes
             genome_files = genome_files[:50]
-            output_file = self.genome_list_file
-        else:
-            output_file = self.script_dir / "genome_list.txt"
+        
+        output_file = self.genome_list_file
         
         with open(output_file, 'w') as f:
             for genome in genome_files:
@@ -63,6 +69,10 @@ class ProkkaPipeline:
     
     def run_prokka_batch(self, start_idx, end_idx):
         """Run Prokka on a batch of genomes."""
+        if not self.genome_list_file.exists():
+            self.logger.error(f"Genome list file not found: {self.genome_list_file}")
+            sys.exit(1)
+
         # Read genome list
         with open(self.genome_list_file, 'r') as f:
             all_genomes = [line.strip() for line in f if line.strip()]
@@ -135,8 +145,7 @@ class ProkkaPipeline:
     
     def check_progress(self):
         """Check Prokka annotation progress."""
-        # In test mode, count from genome list file if it exists
-        if self.test_mode and self.genome_list_file.exists():
+        if self.genome_list_file.exists():
             with open(self.genome_list_file, 'r') as f:
                 total_genomes = sum(1 for line in f if line.strip())
         else:
@@ -421,6 +430,7 @@ def main():
     parser.add_argument('command', choices=['run', 'check', 'validate', 'rerun', 'stats', 'prepare'],
                        help='Command to execute')
     parser.add_argument('--test', action='store_true', help='Run in test mode (first 50 genomes)')
+    parser.add_argument('--genome-list', help='Path to genome list file (process only these genomes)')
     parser.add_argument('--batch-start', type=int, help='Start index for batch processing (0-based)')
     parser.add_argument('--batch-end', type=int, help='End index for batch processing')
     parser.add_argument('--incomplete-list', help='Path to incomplete genomes list file')
@@ -430,7 +440,7 @@ def main():
     args = parser.parse_args()
     
     # Initialize pipeline
-    pipeline = ProkkaPipeline(test_mode=args.test)
+    pipeline = ProkkaPipeline(test_mode=args.test, genome_list_file=args.genome_list)
     
     if args.command == 'prepare':
         # Create genome list

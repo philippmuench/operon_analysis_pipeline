@@ -1,22 +1,23 @@
 Prokka Annotation Statistics for Manuscript
 ==================================================
+Generated: 2025-12-17 16:28:46
 
 1. Input Genomes:
-   Total E. faecalis assemblies: 8,587
+   Total E. faecalis assemblies: 8,603
 
 2. Software Version:
-   
+   Prokka 1.14.6
 
 3. Annotation Results:
-   Total genomes processed: 8,587
-   Sample analyzed: 8,587
-   Complete annotations: 8,587
+   Total genomes processed: 8,603
+   Sample analyzed: 8,603
+   Complete annotations: 8,603
    Success rate: 100.0%
-   Average genes per genome: 2821
-   Median genes per genome: 2800
-   Gene count range: 2391-3728
+   Average genes per genome: 2,821
+   Median genes per genome: 2,800
+   Gene count range: 2,391 - 3,728
    Standard deviation: 201
-   Total genes annotated: 24,222,330
+   Total genes annotated: 24,267,044
 
 4. Output Files Generated per Genome:
    .gff: Gene feature format (annotations)
@@ -31,8 +32,12 @@ Prokka Annotation Statistics for Manuscript
 ==================================================
 MANUSCRIPT NUMBERS SUMMARY:
 ==================================================
-Input assemblies: 8,587 E. faecalis genomes
-Successfully annotated: 8,587 genomes
-Average genes per genome: 2821
-Total genes predicted: 24,222,330
+Input assemblies: 8,603 E. faecalis genomes
+Successfully annotated: 8,603 genomes (100%)
+Average genes per genome: 2,821
+Median genes per genome: 2,800
+Total genes predicted: 24,267,044
 Output file types: 8 per genome (.gff, .faa, .ffn, .fna, .gbk, .tsv, .txt, .log)
+
+==================================================
+Source: manuscript_stats_20251217_162846.json
