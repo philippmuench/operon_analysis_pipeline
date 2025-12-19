@@ -1,0 +1,45 @@
+================================================================================
+BLAST SEARCH MANUSCRIPT STATISTICS
+Generated: 2025-12-17 18:21:08
+================================================================================
+
+REFERENCE SEQUENCES
+----------------------------------------
+protein: 7 sequences
+nt: 7 sequences
+noncoding: 2 sequences
+
+BLAST OUTPUT FILES
+----------------------------------------
+coding_protein: 8603 result files
+coding_nt: 8603 result files
+prokka_variants: 8603 result files
+noncoding: 8603 result files
+
+HITS BY MODE
+----------------------------------------
+tblastn (protein vs genome): 367,425 hits (HQ: 57,984/367,425 = 15.8%)
+blastn coding (nt vs genome): 57,973 hits (HQ: 57,937/57,973 = 99.9%)
+blastn noncoding (promoters): 8,668 hits (HQ: 8,602/8,668 = 99.2%)
+
+NOTE: Primary statistics reported for tblastn only to avoid double-counting.
+
+OPERON DETECTION SUMMARY
+----------------------------------------
+Total genomes analyzed: 8603
+Genomes with complete operon (7 genes): 8277
+Genomes with complete HQ operon (7 genes, ≥90% identity, ≥80% coverage): 8266
+Genomes with ≥6 genes: 8593
+Genomes with ≥5 genes: 8603
+Genomes with any hits: 8603
+
+GENE COUNT DISTRIBUTION
+----------------------------------------
+0 genes: 0 genomes (0.0%)
+1 genes: 0 genomes (0.0%)
+2 genes: 0 genomes (0.0%)
+3 genes: 0 genomes (0.0%)
+4 genes: 0 genomes (0.0%)
+5 genes: 10 genomes (0.1%)
+6 genes: 316 genomes (3.7%)
+7 genes: 8277 genomes (96.2%)
