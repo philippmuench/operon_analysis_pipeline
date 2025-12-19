@@ -11,7 +11,7 @@ import argparse
 import pandas as pd
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 import logging
 from datetime import datetime
 import numpy as np
@@ -24,8 +24,10 @@ class BlastPipeline:
                  output_dir: str = "output",
                  batch_id: Optional[int] = None,
                  batch_size: int = 100,
-                 num_threads: int = 60):
+                 num_threads: int = 60,
+                 genome_list_file: Optional[str] = None):
         
+        self.script_dir = Path(__file__).parent.absolute()
         self.prokka_dir = Path(prokka_dir)
         self.assembly_dir = Path(assembly_dir)
         self.reference_dir = Path(reference_dir)
@@ -33,6 +35,10 @@ class BlastPipeline:
         self.batch_id = batch_id
         self.batch_size = batch_size
         self.num_threads = num_threads
+        self.genome_list_path: Optional[Path] = None
+        self.custom_assembly_files: List[Path] = []
+        self.custom_prokka_dirs: List[Path] = []
+        self.allowed_genome_ids: Set[str] = set()
         
         # Output directories for different BLAST modes
         self.blast_dirs = {
@@ -51,6 +57,50 @@ class BlastPipeline:
         
         # Setup logging
         self.setup_logging()
+
+        if genome_list_file:
+            self.genome_list_path = self._resolve_path(genome_list_file)
+            if not self.genome_list_path.exists():
+                raise FileNotFoundError(f"Genome list file not found: {self.genome_list_path}")
+            self.logger.info(f"Using custom genome list: {self.genome_list_path}")
+            self._load_genome_list()
+
+    def _resolve_path(self, path_str: str) -> Path:
+        path = Path(path_str)
+        if not path.is_absolute():
+            path = (self.script_dir / path).resolve()
+        return path
+
+    def _normalize_genome_name(self, name: str) -> str:
+        base = Path(name).name
+        if base.endswith('.gz'):
+            base = base[:-3]
+        for suffix in ['.fasta', '.fa', '.fna', '.ffn', '.faa', '.gbk']:
+            if base.endswith(suffix):
+                base = base[: -len(suffix)]
+        return base
+
+    def _load_genome_list(self):
+        with open(self.genome_list_path, 'r') as f:
+            for line in f:
+                entry = line.strip()
+                if not entry or entry.startswith('#'):
+                    continue
+                candidate = Path(entry)
+                if not candidate.is_absolute():
+                    candidate = (self.script_dir / candidate).resolve()
+                if candidate.exists():
+                    if candidate.is_file():
+                        self.custom_assembly_files.append(candidate)
+                    elif candidate.is_dir():
+                        self.custom_prokka_dirs.append(candidate)
+                    self.allowed_genome_ids.add(self._normalize_genome_name(candidate.name))
+                else:
+                    self.allowed_genome_ids.add(self._normalize_genome_name(entry))
+        if self.custom_assembly_files:
+            self.logger.info(f"Loaded {len(self.custom_assembly_files)} assemblies from custom list")
+        if self.allowed_genome_ids:
+            self.logger.info(f"Restricting analysis to {len(self.allowed_genome_ids)} genome IDs")
         
     def setup_logging(self):
         """Setup logging configuration."""
@@ -77,13 +127,25 @@ class BlastPipeline:
     def get_batch_genomes(self, use_assemblies: bool = True) -> List[Path]:
         """Get list of genomes for the current batch."""
         if use_assemblies:
-            # Get assembly files
-            all_files = sorted(self.assembly_dir.glob('*.fasta.gz'))
-            self.logger.info(f"Found {len(all_files)} assembly files")
+            if self.custom_assembly_files:
+                all_files = [p for p in self.custom_assembly_files if p.exists()]
+                self.logger.info(f"Using custom assembly list with {len(all_files)} files")
+            else:
+                # Get assembly files
+                all_files = sorted(self.assembly_dir.glob('*.fasta.gz'))
+                if self.allowed_genome_ids:
+                    all_files = [f for f in all_files if self._normalize_genome_name(f.name) in self.allowed_genome_ids]
+                self.logger.info(f"Found {len(all_files)} assembly files")
         else:
-            # Get prokka directories for variants
-            all_files = sorted([d for d in self.prokka_dir.iterdir() if d.is_dir()])
-            self.logger.info(f"Found {len(all_files)} prokka directories")
+            if self.custom_prokka_dirs:
+                all_files = [d for d in self.custom_prokka_dirs if d.is_dir()]
+                self.logger.info(f"Using custom Prokka directory list with {len(all_files)} entries")
+            else:
+                # Get prokka directories for variants
+                all_files = sorted([d for d in self.prokka_dir.iterdir() if d.is_dir()])
+                if self.allowed_genome_ids:
+                    all_files = [d for d in all_files if self._normalize_genome_name(d.name) in self.allowed_genome_ids]
+                self.logger.info(f"Found {len(all_files)} prokka directories")
         
         if self.batch_id is not None:
             start_idx = (self.batch_id - 1) * self.batch_size
@@ -706,6 +768,7 @@ def main():
     parser.add_argument('--ref-dir', default='../02_reference_operon_extraction/output',
                        help='Directory containing reference sequences')
     parser.add_argument('--output-dir', default='output', help='Output directory')
+    parser.add_argument('--genome-list', help='File listing assemblies/IDs to process (one per line)')
     
     args = parser.parse_args()
     
@@ -717,7 +780,8 @@ def main():
         output_dir=args.output_dir,
         batch_id=args.batch_id,
         batch_size=args.batch_size,
-        num_threads=args.threads
+        num_threads=args.threads,
+        genome_list_file=args.genome_list
     )
     
     # Create output directories

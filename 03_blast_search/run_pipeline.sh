@@ -7,6 +7,9 @@
 #SBATCH --cpus-per-task=60
 #SBATCH --partition=cpu
 
+# Prokka output directory (updated for new run with 8,603 genomes)
+PROKKA_DIR="../prokka_output"
+
 # Unified BLAST pipeline runner
 # This script can run in different modes:
 #   1. Array mode (default): Process genomes in batches for BLAST search
@@ -21,11 +24,56 @@
 set -euo pipefail
 
 # Parse command line arguments
-MODE="${1:-search}"  # Default to search mode for array jobs
+MODE="search"  # Default to search mode for array jobs
+GENOME_LIST_FILE=""
+
+# First positional argument defines the mode (if provided and not an option)
+if [[ $# -gt 0 && "$1" != --* ]]; then
+    MODE="$1"
+    shift
+fi
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --genome-list)
+            if [[ -z "${2:-}" ]]; then
+                echo "ERROR: --genome-list requires a file path" >&2
+                exit 1
+            fi
+            GENOME_LIST_FILE="$2"
+            shift 2
+            ;;
+        --help)
+            echo "Usage: sbatch [--array=...] run_pipeline.sh [MODE] [--genome-list FILE]"
+            echo "Modes: search (default), process, overview, stats, all"
+            exit 0
+            ;;
+        *)
+            echo "ERROR: Unknown option: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -n "$GENOME_LIST_FILE" ]]; then
+    if [[ ! "$GENOME_LIST_FILE" = /* ]]; then
+        if [[ -n "$SLURM_SUBMIT_DIR" ]]; then
+            GENOME_LIST_FILE="$SLURM_SUBMIT_DIR/$GENOME_LIST_FILE"
+        else
+            GENOME_LIST_FILE="$(pwd)/$GENOME_LIST_FILE"
+        fi
+    fi
+    if [[ ! -f "$GENOME_LIST_FILE" ]]; then
+        echo "ERROR: genome list file not found: $GENOME_LIST_FILE" >&2
+        exit 1
+    fi
+fi
 
 # Initialize conda
 eval "$(/home/pmuench/miniconda3/bin/conda shell.bash hook)"
 conda activate efs_diversity
+export PATH="/home/pmuench/miniconda3/envs/efs_diversity/bin:$PATH"
+hash -r
 
 # Set Python path to ensure imports work
 export PYTHONPATH="${PYTHONPATH:-}:$(pwd)"
@@ -47,18 +95,28 @@ run_pipeline() {
     if [ -n "$batch_id" ]; then
         # Running as array job for BLAST search
         echo "Running pipeline in $mode mode for batch $batch_id"
-        python blast_pipeline.py \
+        cmd=(python blast_pipeline.py \
             --mode "$mode" \
             --batch-id "$batch_id" \
             --batch-size 100 \
             --threads "$SLURM_CPUS_PER_TASK" \
-            --blast-modes coding_protein coding_nt prokka_variants noncoding
+            --prokka-dir "$PROKKA_DIR" \
+            --blast-modes coding_protein coding_nt prokka_variants noncoding)
+        if [[ -n "$GENOME_LIST_FILE" ]]; then
+            cmd+=(--genome-list "$GENOME_LIST_FILE")
+        fi
+        "${cmd[@]}"
     else
         # Running in single mode for processing/stats
         echo "Running pipeline in $mode mode (single job)"
-        python blast_pipeline.py \
+        cmd=(python blast_pipeline.py \
             --mode "$mode" \
-            --threads "$SLURM_CPUS_PER_TASK"
+            --threads "$SLURM_CPUS_PER_TASK" \
+            --prokka-dir "$PROKKA_DIR")
+        if [[ -n "$GENOME_LIST_FILE" ]]; then
+            cmd+=(--genome-list "$GENOME_LIST_FILE")
+        fi
+        "${cmd[@]}"
     fi
 }
 
