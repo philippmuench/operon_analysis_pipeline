@@ -10,6 +10,7 @@ non-synonymous). The goal is to provide ready-to-plot material for figures.
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
@@ -22,6 +23,18 @@ import pandas as pd
 from Bio import AlignIO
 from Bio.Align import MultipleSeqAlignment
 import numpy as np
+
+CURRENT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = CURRENT_DIR.parent
+CODON_PLOT_DIR = ROOT_DIR / '14_codon_plots'
+if str(CODON_PLOT_DIR) not in sys.path:
+    sys.path.append(str(CODON_PLOT_DIR))
+
+from codon_window_plots import (
+    compute_codon_stats,
+    plot_codon_window_codons,
+    plot_codon_window_combined,
+)
 
 mpl.rcParams['pdf.fonttype'] = 42
 mpl.rcParams['ps.fonttype'] = 42
@@ -349,48 +362,6 @@ def plot_alignment_examples(alignment: MultipleSeqAlignment, codon_idx: int,
     fig.tight_layout()
     fig.savefig(out_path)
     plt.close(fig)
-
-
-def compute_codon_stats(alignment: MultipleSeqAlignment, codon_idx: int) -> Dict[str, object]:
-    start = (codon_idx - 1) * 3
-    end = start + 3
-
-    if start < 0 or end > alignment.get_alignment_length():
-        return {
-            'codon_counts': Counter(),
-            'aa_counts': Counter(),
-            'n_variants': 0,
-            'category': 'invariant',
-        }
-
-    codon_counts: Counter[str] = Counter()
-    for record in alignment:
-        codon = str(record.seq[start:end]).upper()
-        if len(codon) != 3 or '-' in codon or 'N' in codon or codon not in GENETIC_CODE:
-            continue
-        codon_counts[codon] += 1
-
-    aa_counts: Counter[str] = Counter()
-    for codon, count in codon_counts.items():
-        aa_counts[GENETIC_CODE[codon]] += count
-
-    n_variants = len(codon_counts)
-    category = 'invariant'
-    if n_variants >= 2:
-        n_amino_acids = len(aa_counts)
-        if n_amino_acids == 1:
-            category = 'synonymous-only'
-        else:
-            category = 'nonsynonymous-only'
-
-    return {
-        'codon_counts': codon_counts,
-        'aa_counts': aa_counts,
-        'n_variants': max(n_variants, 1 if codon_counts else 0),
-        'category': category,
-    }
-
-
 def plot_codon_window_heatmap(alignment: MultipleSeqAlignment, focus_idx: int,
                               gene: str, output_dir: Path, window_size: int) -> None:
     total_codons = alignment.get_alignment_length() // 3
@@ -493,202 +464,6 @@ def plot_codon_window_heatmap(alignment: MultipleSeqAlignment, focus_idx: int,
     plt.close(fig)
 
 
-def plot_codon_window_codons(alignment: MultipleSeqAlignment, focus_idx: int,
-                             gene: str, output_dir: Path, window_size: int) -> None:
-    total_codons = alignment.get_alignment_length() // 3
-    window_min = max(1, focus_idx - window_size)
-    window_max = min(total_codons, focus_idx + window_size)
-    positions = list(range(window_min, window_max + 1))
-
-    stats_per_pos = {pos: compute_codon_stats(alignment, pos) for pos in positions}
-
-    codon_totals = Counter()
-    for pos in positions:
-        codon_totals.update(stats_per_pos[pos]['codon_counts'])
-
-    if not codon_totals:
-        return
-
-    sorted_codons = [cod for cod, _ in codon_totals.most_common()]
-
-    matrix = np.zeros((len(sorted_codons), len(positions)), dtype=float)
-    for j, pos in enumerate(positions):
-        counts = stats_per_pos[pos]['codon_counts']
-        for i, cod in enumerate(sorted_codons):
-            matrix[i, j] = counts.get(cod, 0)
-
-    fig_width = max(6, len(positions) * 0.7)
-    fig_height = max(4, len(sorted_codons) * 0.35)
-    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-
-    ax.set_xticks(range(len(positions)))
-    ax.set_xticklabels(positions, rotation=45, ha='right')
-    ax.set_yticks(range(len(sorted_codons)))
-    ax.set_yticklabels(sorted_codons, fontsize=9)
-    ax.set_xlabel('Codon position')
-    ax.set_ylabel('Observed codons (sorted by abundance)')
-    ax.set_xlim(-0.5, len(positions) - 0.5)
-    ax.set_ylim(-0.5, len(sorted_codons) - 0.5)
-    ax.invert_yaxis()
-
-    for i in range(len(sorted_codons)):
-        for j in range(len(positions)):
-            value = matrix[i, j]
-            facecolor = 'white' if value > 0 else '#f6f6f6'
-            rect = plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
-                                 facecolor=facecolor, edgecolor='#b0b0b0', linewidth=0.6)
-            ax.add_patch(rect)
-            if value > 0:
-                display_value = int(value) if value < 8000 else f">{int(value//1000)}k"
-                ax.text(j, i, display_value, ha='center', va='center', fontsize=8,
-                        family='monospace')
-
-    ax.set_title(f'{gene}: codon usage around position {focus_idx}\n(window {positions[0]}–{positions[-1]})')
-
-    fig.tight_layout()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f'{gene}_codon_{focus_idx}_window_codons.pdf'
-    if out_path.exists():
-        out_path.unlink()
-    fig.savefig(out_path)
-    plt.close(fig)
-
-
-def plot_codon_window_combined(alignment: MultipleSeqAlignment, focus_idx: int,
-                               gene: str, output_dir: Path, window_size: int) -> None:
-    total_codons = alignment.get_alignment_length() // 3
-    window_min = max(1, focus_idx - window_size)
-    window_max = min(total_codons, focus_idx + window_size)
-    positions = list(range(window_min, window_max + 1))
-
-    stats_per_pos = {pos: compute_codon_stats(alignment, pos) for pos in positions}
-
-    amino_acids = []
-    for stats in stats_per_pos.values():
-        for aa in stats['aa_counts']:
-            if aa not in amino_acids:
-                amino_acids.append(aa)
-
-    if not amino_acids:
-        return
-
-    aa_totals = {aa: sum(stats_per_pos[pos]['aa_counts'].get(aa, 0) for pos in positions)
-                 for aa in amino_acids}
-    amino_acids.sort(key=lambda aa: aa_totals[aa], reverse=True)
-
-    aa_matrix = np.zeros((len(amino_acids), len(positions)), dtype=float)
-    for j, pos in enumerate(positions):
-        aa_counts = stats_per_pos[pos]['aa_counts']
-        for i, aa in enumerate(amino_acids):
-            aa_matrix[i, j] = aa_counts.get(aa, 0)
-
-    codon_totals = Counter()
-    for pos in positions:
-        codon_totals.update(stats_per_pos[pos]['codon_counts'])
-    if not codon_totals:
-        return
-    sorted_codons = [cod for cod, _ in codon_totals.most_common()]
-    codon_matrix = np.zeros((len(sorted_codons), len(positions)), dtype=float)
-    for j, pos in enumerate(positions):
-        counts = stats_per_pos[pos]['codon_counts']
-        for i, cod in enumerate(sorted_codons):
-            codon_matrix[i, j] = counts.get(cod, 0)
-
-    categories = []
-    for pos in positions:
-        cat = stats_per_pos[pos]['category']
-        if cat not in ('synonymous-only', 'nonsynonymous-only'):
-            cat = 'invariant'
-        categories.append(cat)
-    category_colors = {
-        'synonymous-only': CATEGORY_COLORS['synonymous-only'],
-        'nonsynonymous-only': CATEGORY_COLORS['nonsynonymous-only'],
-        'invariant': '#9e9e9e',
-    }
-    n_variants = [stats_per_pos[pos]['n_variants'] for pos in positions]
-    colors = [category_colors[cat] for cat in categories]
-
-    fig_width = max(6, len(positions) * 0.7)
-    fig_height = max(6, len(sorted_codons) * 0.3 + 5)
-    fig = plt.figure(figsize=(fig_width, fig_height))
-    gs = fig.add_gridspec(3, 1, height_ratios=[3.0, max(2.0, len(sorted_codons) * 0.25), 1.2], hspace=0.3)
-
-    ax_aa = fig.add_subplot(gs[0])
-    ax_cod = fig.add_subplot(gs[1], sharex=ax_aa)
-    ax_bar = fig.add_subplot(gs[2], sharex=ax_aa)
-
-    # Amino acid panel
-    ax_aa.set_yticks(range(len(amino_acids)))
-    ax_aa.set_yticklabels(amino_acids, fontsize=9)
-    ax_aa.set_xticks(range(len(positions)))
-    ax_aa.set_xticklabels(positions, rotation=45, ha='right')
-    ax_aa.set_ylabel('Amino acids')
-    ax_aa.set_xlim(-0.5, len(positions) - 0.5)
-    ax_aa.set_ylim(-0.5, len(amino_acids) - 0.5)
-    ax_aa.invert_yaxis()
-
-    for i in range(len(amino_acids)):
-        for j in range(len(positions)):
-            value = aa_matrix[i, j]
-            facecolor = 'white' if value > 0 else '#f6f6f6'
-            rect = plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
-                                 facecolor=facecolor, edgecolor='#b0b0b0', linewidth=0.6)
-            ax_aa.add_patch(rect)
-            if value > 0:
-                display_value = int(value) if value < 8000 else f">{int(value//1000)}k"
-                ax_aa.text(j, i, display_value, ha='center', va='center', fontsize=8,
-                           family='monospace')
-
-    ax_aa.axvline(-0.5, color='#7f7f7f', linestyle=':', linewidth=0.8)
-    ax_aa.axvline(len(positions) - 0.5, color='#7f7f7f', linestyle=':', linewidth=0.8)
-    ax_aa.text((len(positions) - 1) / 2, -1.1,
-               f'Window {positions[0]} – {positions[-1]}',
-               ha='center', va='top', fontsize=9)
-
-    # Codon panel
-    ax_cod.set_yticks(range(len(sorted_codons)))
-    ax_cod.set_yticklabels(sorted_codons, fontsize=8)
-    ax_cod.set_ylabel('Codons')
-    ax_cod.set_xlim(-0.5, len(positions) - 0.5)
-    ax_cod.set_ylim(-0.5, len(sorted_codons) - 0.5)
-    ax_cod.invert_yaxis()
-    ax_cod.set_xticks(range(len(positions)))
-    ax_cod.set_xticklabels(positions, rotation=45, ha='right')
-
-    for i in range(len(sorted_codons)):
-        for j in range(len(positions)):
-            value = codon_matrix[i, j]
-            facecolor = 'white' if value > 0 else '#f6f6f6'
-            rect = plt.Rectangle((j - 0.5, i - 0.5), 1, 1,
-                                 facecolor=facecolor, edgecolor='#b0b0b0', linewidth=0.6)
-            ax_cod.add_patch(rect)
-            if value > 0:
-                display_value = int(value) if value < 8000 else f">{int(value//1000)}k"
-                ax_cod.text(j, i, display_value, ha='center', va='center', fontsize=7,
-                            family='monospace')
-
-    # Diversity bars
-    ax_bar.axvspan(-0.5, len(positions) - 0.5, color='#f2f2f2', alpha=0.25)
-    ax_bar.bar(range(len(positions)), n_variants, color='white', edgecolor=colors, linewidth=1.5)
-    ax_bar.set_ylabel('Distinct codons', labelpad=8)
-    ax_bar.set_xlabel('Codon position', labelpad=10)
-    ax_bar.set_xticks(range(len(positions)))
-    ax_bar.set_xticklabels(positions, rotation=45, ha='right')
-
-    legend_handles = [
-        plt.Line2D([], [], marker='s', linestyle='', color='white', markeredgecolor=category_colors[key],
-                   label=key.replace('-', ' '))
-        for key in ['invariant', 'synonymous-only', 'nonsynonymous-only']
-    ]
-    ax_bar.legend(handles=legend_handles, frameon=False, loc='upper right', fontsize=8)
-
-    fig.tight_layout()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f'{gene}_codon_{focus_idx}_window_combined.pdf'
-    if out_path.exists():
-        out_path.unlink()
-    fig.savefig(out_path)
-    plt.close(fig)
 def ensure_outputs(output_dir: Path) -> None:
     (output_dir / 'tables').mkdir(parents=True, exist_ok=True)
     (output_dir / 'plots').mkdir(parents=True, exist_ok=True)
