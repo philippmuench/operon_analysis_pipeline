@@ -14,7 +14,7 @@ python3 draw_tree_with_metadata.py
 
 ## Input
 - Tree: `../10_phylophlan/output_isolates/RAxML_bestTree.input_isolates_refined.tre`
-- Metadata: `../00_annotation/8587_Efs_metadata_ASbarcode.txt`
+- Metadata: `../00_annotation/202251215_metadata_8573strains_23Isolates.txt`
 
 ## Output
 Files generated in `output/` directory:

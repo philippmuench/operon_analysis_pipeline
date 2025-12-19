@@ -157,7 +157,7 @@ def main():
     # Configuration
     base_dir = "/vol/projects/BIFO/genomenet/baerbel_science_rebuttal/operon_analysis"
     tree_file = os.path.join(base_dir, "10_phylophlan/output_isolates/RAxML_bestTree.input_isolates_refined.tre")
-    metadata_file = os.path.join(base_dir, "00_annotation/8587_Efs_metadata_ASbarcode.txt")
+    metadata_file = os.path.join(base_dir, "00_annotation/202251215_metadata_8573strains_23Isolates.txt")
     work_dir = os.path.join(base_dir, "11_draw_tree")
     output_dir = os.path.join(work_dir, "output")
     
