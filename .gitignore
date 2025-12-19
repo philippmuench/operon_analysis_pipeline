@@ -21,7 +21,7 @@
 13e_full_operon_mapping/output_full_run/position_stats/variation_windows/
 
 # Specifically ignore the metadata file with sensitive information
-00_annotation/8587_Efs_metadata_ASbarcode.txt
+00_annotation/202251215_metadata_8573strains_23Isolates.txt
 
 # Allow specific visualization and summary files
 !*/output/mappings/*/*/plots/*.png

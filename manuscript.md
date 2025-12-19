@@ -15,6 +15,26 @@ Unless noted otherwise, headline counts refer to the tblastn mode only to avoid 
 Operon prevalence was high. Using tblastn, 8,261 genomes contained all seven operon genes (any quality), and 8,250 genomes contained all seven genes with HQ matches (96.1% of the dataset). Gene-level presence and prevalence summaries (tblastn), and complementary results from coding-sequence blastn and promoter searches, are provided in Supplementary Tables.
 Both DNA strands were searched automatically by BLAST; reverse-complement matches were recognized by coordinate order (sstart > send). Multiple sequence alignments for downstream analyses were generated with MAFFT v7.490 using automatic algorithm selection.
 
+## Lab-strain Operon Reference Extraction (Step 13a)
+
+To anchor the fructoselysine/glucoselysine locus on the lab-strain coordinate system, we re-parsed the `FL_operon_with_SNPs.gb` record that was provided with promoter annotations and the eight polymorphisms observed in our mouse isolates. The extractor collapses overlapping `misc_feature` annotations, applies keyword-based rules to assign canonical gene and regulatory labels, and reverse-complements complement-strand features so that all seven coding genes plus the promoter elements are exported in a consistent order. The workflow emits paired nucleotide and amino-acid FASTA files together with a tabular feature summary and a list of curated polymorphisms, forming the reference package consumed by downstream steps.
+
+## BLAST Search With the Updated Reference (Step 13b)
+
+Using the lab-strain-derived reference set, we re-ran the unified BLAST pipeline against all 8,587 assemblies. Protein tblastn remains the headline search mode, while coding-sequence blastn, promoter-focused blastn, and optional Prokka-derived variant scans provide complementary context. For every genome×query×mode we retain the best-bitscore hit and flag it as high-confidence when identity ≥90% and query coverage ≥80%. Post-processing aggregates genome-level operon completeness, per-gene prevalence (both overall and HQ), and promoter recovery rates, yielding manuscript-ready tables and logs that mirror the Stage 03 reporting but on the lab-strain coordinate system.
+
+## Assembly-based Sequence Extraction and Alignments (Step 13c)
+
+Operon-positive loci are then recaptured directly from the assemblies using the same ≥90% identity/≥80% coverage thresholds (relaxed to 80/70 for promoters when present). For each gene we collate the extracted nucleotide sequences, align them with MAFFT, and retain the MSAs for downstream evolutionary analyses. The pipeline computes Shannon-entropy conservation profiles, gap distributions, and pairwise identity, emits per-gene plots (conservation traces, gap fraction plots, sequence logos when supported), and tabulates summary (`operon_conservation_metrics.csv`) and detailed (`operon_conservation_metrics_detailed.csv`) metrics that match the formatting used for the core gene analysis.
+
+## Earlier-to-Updated Comparisons (Step 13d)
+
+To quantify the impact of the lab-strain update, comparison utilities ingest pairs of extraction summaries and conservation tables from the earlier Stage 05 pipeline and the new Step 13 workflow. The scripts produce side-by-side TSVs reporting sequence counts, alignment lengths, and conservation deltas, and generate scatter plots that visualise how each operon component shifts between runs. These outputs guide manuscript statements about gains in sequence yield and improved alignment quality relative to the original workflow.
+
+## Full-length Operon Mapping (Step 13e)
+
+Finally, we aligned the complete ORIGIN sequence from both the previously used operon GenBank record and the lab-strain update against every assembly with megablast. Of the 8,587 assemblies scanned, 8,210 yielded ≥90% identity and ≥80% coverage hits for both references, and 8,149 also satisfied a high-quality cutoff of ≥95% sequence identity plus ≥95% query coverage. Position-wise aggregation of the raw alignments supplies coverage, mismatch, and deletion rates along the operon, which are visualised as normalized coverage and error-rate profiles alongside zoom panels for gap hotspots. All best-scoring alignments in this qualifying set mapped in the forward orientation, indicating no strand inversions relative to either reference.
+
 ## Core Gene Analysis
 
 To establish a baseline for evaluating operon gene conservation, we performed comprehensive core gene analysis across all annotated *E. faecalis* genomes. Core genes were defined as those present in ≥95% of genomes, representing the conserved genetic backbone of the species.
