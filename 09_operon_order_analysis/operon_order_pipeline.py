@@ -1005,7 +1005,7 @@ def main():
                        default=['all'],
                        help="Which analysis steps to run")
     parser.add_argument("--metadata",
-                       default="../00_annotation/8587_Efs_metadata_ASbarcode.txt",
+                       default="../00_annotation/202251215_metadata_8573strains_23Isolates.txt",
                        help="Metadata file for stratification analysis")
     
     args = parser.parse_args()
