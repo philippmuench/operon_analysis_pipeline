@@ -132,7 +132,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 131,2,True,1,0,1
 132,1,False,0,0,0
 133,2,True,1,0,1
-134,2,True,1,0,1
+134,3,True,1,1,2
 135,2,True,1,0,1
 136,4,True,1,1,2
 137,1,False,0,0,0

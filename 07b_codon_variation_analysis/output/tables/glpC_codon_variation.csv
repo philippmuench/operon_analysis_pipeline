@@ -205,7 +205,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 204,3,True,1,1,2
 205,2,True,1,0,1
 206,5,True,1,1,2
-207,3,True,1,0,1
+207,4,True,1,1,2
 208,3,True,1,1,2
 209,1,False,0,0,0
 210,2,True,1,0,1
@@ -272,7 +272,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 271,2,True,1,0,1
 272,2,True,1,0,1
 273,3,True,1,1,2
-274,2,True,0,1,1
+274,3,True,1,1,2
 275,2,True,0,1,1
 276,2,True,1,0,1
 277,1,False,0,0,0

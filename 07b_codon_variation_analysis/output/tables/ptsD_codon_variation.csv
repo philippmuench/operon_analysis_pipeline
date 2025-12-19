@@ -197,7 +197,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 196,1,False,0,0,0
 197,1,False,0,0,0
 198,2,True,0,1,1
-199,1,False,0,0,0
+199,2,True,0,1,1
 200,1,False,0,0,0
 201,2,True,0,1,1
 202,1,False,0,0,0

@@ -24,7 +24,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 23,3,True,1,1,2
 24,1,False,0,0,0
 25,1,False,0,0,0
-26,1,False,0,0,0
+26,2,True,0,1,1
 27,1,False,0,0,0
 28,1,False,0,0,0
 29,1,False,0,0,0
@@ -37,7 +37,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 36,1,False,0,0,0
 37,2,True,0,1,1
 38,4,True,1,1,2
-39,1,False,0,0,0
+39,2,True,0,1,1
 40,1,False,0,0,0
 41,2,True,0,1,1
 42,1,False,0,0,0

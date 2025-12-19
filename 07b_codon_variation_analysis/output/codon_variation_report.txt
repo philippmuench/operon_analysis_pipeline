@@ -1,7 +1,7 @@
 ================================================================================
 CODON VARIATION-BASED SELECTION ANALYSIS REPORT
 ================================================================================
-Generated: 2025-08-25 21:02:03
+Generated: 2025-12-19 10:53:58
 Expected neutral pN/pS ratio: 2.5
 
 SUMMARY STATISTICS
@@ -11,46 +11,46 @@ OPERON GENES:
   Total genes: 7
   Genes with variation: 7
   Genes with finite selection values: 7
-  Mean variation rate: 20.055% ± 2.217%
-  Mean variable codons: 160.4 ± 122.6
+  Mean variation rate: 20.147% ± 2.229%
+  Mean variable codons: 161.0 ± 122.9
 
   Selection metrics:
-    Mean normalized selection: 1.218
-    Median normalized selection: 0.843
-    Range: 0.489 - 3.500
+    Mean normalized selection: 1.230
+    Median normalized selection: 0.860
+    Range: 0.489 - 3.533
 
   Selection categories:
-    Moderate Purifying: 2 (28.6%)
-    Near Neutral: 3 (42.9%)
+    Moderate Purifying: 1 (14.3%)
+    Near Neutral: 4 (57.1%)
     Relaxed Positive: 2 (28.6%)
 
 CORE GENES:
-  Total genes: 1252
-  Genes with variation: 1252
-  Genes with finite selection values: 1252
-  Mean variation rate: 30.902% ± 21.645%
-  Mean variable codons: 216.7 ± 173.3
+  Total genes: 1251
+  Genes with variation: 1251
+  Genes with finite selection values: 1249
+  Mean variation rate: 30.899% ± 21.576%
+  Mean variable codons: 217.0 ± 173.6
 
   Selection metrics:
-    Mean normalized selection: 3.760
-    Median normalized selection: 0.697
-    Range: 0.054 - 228.400
+    Mean normalized selection: 3.366
+    Median normalized selection: 0.698
+    Range: 0.054 - 112.400
 
   Selection categories:
-    Very Strong Purifying: 5 (0.4%)
-    Strong Purifying: 137 (10.9%)
-    Moderate Purifying: 486 (38.8%)
-    Near Neutral: 207 (16.5%)
-    Relaxed Positive: 417 (33.3%)
+    Very Strong Purifying: 4 (0.3%)
+    Strong Purifying: 137 (11.0%)
+    Moderate Purifying: 484 (38.7%)
+    Near Neutral: 210 (16.8%)
+    Relaxed Positive: 416 (33.3%)
 
 
 STATISTICAL COMPARISON
 ----------------------------------------
 Mann-Whitney U test:
-  Statistic: 4985.50
-  P-value: 5.30e-01
+  Statistic: 5011.00
+  P-value: 5.04e-01
   Significant difference (α=0.05): No
-  Effect size (rank-biserial, signed): -0.138
+  Effect size (rank-biserial, signed): -0.146
   Direction: Operon genes have higher npN/pS than core genes
 
 
@@ -59,36 +59,36 @@ TOP CONSERVED GENES
 
 Operon genes (sorted by selection):
   ptsA            - 0.489 (Moderate purifying)
-  ptsC            - 0.696 (Moderate purifying)
+  ptsC            - 0.720 (Near neutral)
   ptsB            - 0.736 (Near neutral)
-  frpC            - 0.843 (Near neutral)
-  glpC            - 0.870 (Near neutral)
-  fruR            - 1.396 (Relaxed/positive)
-  ptsD            - 3.500 (Relaxed/positive)
+  frpC            - 0.860 (Near neutral)
+  glpC            - 0.893 (Near neutral)
+  fruR            - 1.381 (Relaxed/positive)
+  ptsD            - 3.533 (Relaxed/positive)
 
 Core genes (most conserved):
   tuf             - 0.054 (Very strong purifying)
   rpsZ            - 0.067 (Very strong purifying)
   recA            - 0.089 (Very strong purifying)
   rpsR            - 0.094 (Very strong purifying)
-  ftsE            - 0.098 (Very strong purifying)
+  ftsE            - 0.105 (Strong purifying)
   pyrH            - 0.105 (Strong purifying)
   gcdB            - 0.108 (Strong purifying)
   rpsL            - 0.117 (Strong purifying)
   prs             - 0.125 (Strong purifying)
-  pflB            - 0.139 (Strong purifying)
+  pflB            - 0.138 (Strong purifying)
 
 Core genes (least conserved):
-  dppE_7          - 228.400 (Relaxed/positive)
-  manX_2          - 128.800 (Relaxed/positive)
   gph_2           - 112.400 (Relaxed/positive)
-  licC_4          - 104.200 (Relaxed/positive)
+  licC_4          - 104.000 (Relaxed/positive)
   yknY_2          - 96.000 (Relaxed/positive)
-  ybbH_3          - 68.600 (Relaxed/positive)
-  levE_1          - 65.600 (Relaxed/positive)
-  araQ_2          - 64.200 (Relaxed/positive)
-  murR_1          - 64.200 (Relaxed/positive)
-  agaC_1          - 58.600 (Relaxed/positive)
+  licC_5          - 68.533 (Relaxed/positive)
+  sorA_3          - 55.600 (Relaxed/positive)
+  nagR_2          - 49.600 (Relaxed/positive)
+  ybbH_3          - 46.267 (Relaxed/positive)
+  manZ_4          - 45.467 (Relaxed/positive)
+  dppE_6          - 45.120 (Relaxed/positive)
+  ecfT_1          - 43.067 (Relaxed/positive)
 
 
 INTERPRETATION

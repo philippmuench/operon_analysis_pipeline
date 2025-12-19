@@ -29,8 +29,9 @@ echo "Environment check:"
 python --version
 
 # Check input files exist
-OPERON_FILE="../07_dnds_analysis/output_old/tables/operon_dnds_analysis.csv"
-CORE_FILE="../07_dnds_analysis/output_old/tables/core_genes_dnds_analysis.csv"
+# NOTE: Use output/ for fresh runs, output_old/ contains legacy data
+OPERON_FILE="../07_dnds_analysis/output/tables/operon_dnds_analysis.csv"
+CORE_FILE="../07_dnds_analysis/output/tables/core_genes_dnds_analysis.csv"
 
 echo ""
 echo "Checking input files..."

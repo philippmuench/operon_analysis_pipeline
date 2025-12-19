@@ -163,7 +163,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 162,1,False,0,0,0
 163,1,False,0,0,0
 164,3,True,0,1,1
-165,3,True,0,1,1
+165,4,True,1,1,2
 166,1,False,0,0,0
 167,3,True,1,1,2
 168,2,True,0,1,1
@@ -717,7 +717,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 716,1,False,0,0,0
 717,2,True,1,0,1
 718,2,True,0,1,1
-719,1,False,0,0,0
+719,2,True,1,0,1
 720,2,True,0,1,1
 721,2,True,1,0,1
 722,2,True,1,0,1
@@ -857,7 +857,7 @@ position,n_variants,is_variable,syn_changes,nonsyn_changes,total_changes
 856,1,False,0,0,0
 857,2,True,0,1,1
 858,1,False,0,0,0
-859,2,True,1,0,1
+859,3,True,1,0,1
 860,2,True,1,0,1
 861,2,True,0,1,1
 862,1,False,0,0,0
