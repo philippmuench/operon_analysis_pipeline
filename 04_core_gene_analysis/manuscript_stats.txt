@@ -32,7 +32,7 @@ Generated: 2025-12-18 13:12:41
    Alignments created: 1,252
    Average alignment length: 1079 positions
    Average sequences per alignment: 8585
-   Alignment software: MAFFT v7.526
+   Alignment software: MAFFT v7.313
    Algorithm selection: Automatic (--auto)
 
 5. Conservation Analysis:
@@ -56,5 +56,5 @@ Mean conservation score: 0.931
 
 Methodology:
   - Core gene threshold: ≥95% prevalence
-  - Alignment software: MAFFT v7.526 with automatic algorithm selection
+  - Alignment software: MAFFT v7.313 with automatic algorithm selection
   - Conservation metric: Shannon entropy-based scoring (0-1 scale)
