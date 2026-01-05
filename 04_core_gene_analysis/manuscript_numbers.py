@@ -217,22 +217,19 @@ def generate_manuscript_stats(output_file=None):
     if 'avg_alignment_length' in msa_stats:
         add_line(f"   Average alignment length: {msa_stats['avg_alignment_length']:.0f} positions")
         add_line(f"   Average sequences per alignment: {msa_stats['avg_sequences_per_alignment']:.0f}")
-    # Get MAFFT version dynamically
+    # Get MAFFT version dynamically (uses --version which outputs to stderr)
     import subprocess
     try:
-        mafft_version_output = subprocess.run(['mafft', '--help'], 
-                                             capture_output=True, text=True, stderr=subprocess.STDOUT)
-        # Extract version from output (e.g., "MAFFT v7.526 (2024/Apr/26)")
-        for line in mafft_version_output.stdout.split('\n'):
-            if 'MAFFT v' in line:
-                version_match = line.strip()
-                if version_match:
-                    add_line(f"   Alignment software: {version_match}")
-                    break
+        mafft_version_output = subprocess.run(['mafft', '--version'],
+                                             capture_output=True, text=True)
+        # Version is output to stderr, e.g., "v7.313 (2017/Nov/15)"
+        version_str = mafft_version_output.stderr.strip()
+        if version_str and version_str.startswith('v'):
+            add_line(f"   Alignment software: MAFFT {version_str}")
         else:
             add_line(f"   Alignment software: MAFFT (version unknown)")
     except:
-        add_line(f"   Alignment software: MAFFT v7.526")
+        add_line(f"   Alignment software: MAFFT (version unknown)")
     add_line(f"   Algorithm selection: Automatic (--auto)")
     
     # Conservation analysis
@@ -279,19 +276,17 @@ def generate_manuscript_stats(output_file=None):
     
     add_line(f"\nMethodology:")
     add_line(f"  - Core gene threshold: ≥95% prevalence")
-    # Get MAFFT version for methodology section
+    # Get MAFFT version for methodology section (uses --version which outputs to stderr)
     try:
-        mafft_version_output = subprocess.run(['mafft', '--help'], 
-                                             capture_output=True, text=True, stderr=subprocess.STDOUT)
-        for line in mafft_version_output.stdout.split('\n'):
-            if 'MAFFT v' in line:
-                version_info = line.strip()
-                add_line(f"  - Alignment software: {version_info} with automatic algorithm selection")
-                break
+        mafft_version_output = subprocess.run(['mafft', '--version'],
+                                             capture_output=True, text=True)
+        version_str = mafft_version_output.stderr.strip()
+        if version_str and version_str.startswith('v'):
+            add_line(f"  - Alignment software: MAFFT {version_str} with automatic algorithm selection")
         else:
             add_line(f"  - Alignment software: MAFFT with automatic algorithm selection")
     except:
-        add_line(f"  - Alignment software: MAFFT v7.526 with automatic algorithm selection")
+        add_line(f"  - Alignment software: MAFFT with automatic algorithm selection")
     add_line(f"  - Conservation metric: Shannon entropy-based scoring (0-1 scale)")
     
     # Write to file if specified
