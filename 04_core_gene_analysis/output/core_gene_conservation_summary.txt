@@ -1,7 +1,7 @@
 Core Gene Conservation Summary
 ==================================================
 
-Total genes analyzed: 1252
+Total genes analyzed: 1251
 Average sequences per gene: 8565.7
 Average alignment length: 1170.0 bp
 
