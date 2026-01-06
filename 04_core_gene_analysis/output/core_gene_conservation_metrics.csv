@@ -1,4 +1,4 @@
-gene,n_sequences,alignment_length,conservation_score,sequences_removed
+gene,n_sequences,alignment_length,mean_conservation,sequences_removed
 rpmJ_aligned,8592,117,0.999972,7
 infA_aligned,8594,219,0.99997,7
 rpsU_aligned,8596,177,0.999921,7
