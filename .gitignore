@@ -1,3 +1,9 @@
+# AI/Agent working files - never commit
+AGENTS.md
+TODO.md
+PLAN.md
+JOBS.md
+
 # Ignore output directories and data files - but allow specific plot and summary files
 */output/
 */results/
