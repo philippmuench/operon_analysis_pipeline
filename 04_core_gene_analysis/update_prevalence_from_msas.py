@@ -167,8 +167,7 @@ def regenerate_threshold_plot(threshold_df):
 
 
 def main():
-    os.chdir('/work')
-
+    # Script runs from 04_core_gene_analysis directory (set by SLURM script)
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Target genome count: {TOTAL_GENOMES:,}")
 
