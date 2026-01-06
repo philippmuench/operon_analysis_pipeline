@@ -5,15 +5,20 @@
 | Step | Status | Result |
 |------|--------|--------|
 | **1.1 Prokka Stats** | ✅ Complete | 8,596 genomes, avg 2820.8 genes |
-| **1.2 BLAST Results** | ✅ Complete | 8,596 genomes, 96.1% complete operon |
+| **1.2 BLAST Results** | ✅ Complete | operon_summary.csv filtered (8,596 genomes) |
+| **1.2b BLAST CSVs** | ⏳ Pending | all_blast_hits*.csv, pts*_filtered_hits.csv need filtering |
 | **1.3 Core Gene MSAs** | ✅ Complete | 1,251 files filtered, 8,020 seqs removed, conservation=0.9065 |
 | **1.4 Operon MSAs** | ✅ Complete | 7 files filtered, 49 seqs removed, conservation=0.9878 |
-| **2.1 Diversity Analysis** | ⏳ Pending | |
+| **2.1 Diversity Analysis** | 🔄 Running | SLURM job 9232732 |
 | **2.2 dN/dS Analysis** | ⏳ Pending | (slow - consider skipping) |
 | **2.5 Start Site Analysis** | ⏳ Pending | |
 | **2.6 Operon Order Analysis** | ⏳ Pending | |
 
-**Phase 1 complete!** All filtering done. Ready for Phase 2 downstream analyses.
+**Phase 1 mostly complete.** Diversity analysis running. BLAST detail CSVs still need filtering.
+
+### Pending tasks:
+- `sbatch run_filter_remaining.sh` - filter BLAST detail CSVs
+- `git push origin main` - push 3 commits to GitHub
 
 ---
 
