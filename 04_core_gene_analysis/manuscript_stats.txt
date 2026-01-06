@@ -1,60 +1,10 @@
-Core Gene Analysis Statistics for Manuscript
-============================================================
-Generated: 2025-12-18 13:12:41
+Core Gene Analysis Statistics
+===============================
+Generated: 2026-01-06 18:47:07
 
-1. Input Data:
-   Genomes analyzed: 8,603
-   Source: Prokka-annotated E. faecalis genomes
+Genomes analyzed: 8,596
+Genes analyzed: 1,251
+Mean conservation score: 0.906
+Average sequences per gene: 8559
 
-2. Core Gene Identification:
-   Total unique genes across all genomes: 5,566
-   Core genes (≥95% prevalence): 1,251
-   Genes in 100% of genomes: 223
-   Rare genes (<10% prevalence): 3,742
-
-   Prevalence distribution:
-     ≥99%: 1,080 genes
-     ≥95%: 1,251 genes
-     ≥90%: 1,288 genes
-     ≥80%: 1,347 genes
-     ≥50%: 1,492 genes
-     ≥100%: 223 genes
-
-   Mean gene prevalence: 0.275
-
-3. Sequence Extraction:
-   Core genes with sequences extracted: 1,252
-   Average sequences per gene: 8569
-   Average sequence length: 960 bp
-   Length range: 171-2340 bp
-
-4. Multiple Sequence Alignments:
-   Alignments created: 1,252
-   Average alignment length: 1079 positions
-   Average sequences per alignment: 8585
-   Alignment software: MAFFT v7.313
-   Algorithm selection: Automatic (--auto)
-
-5. Conservation Analysis:
-   Genes analyzed: 1,252
-   Mean conservation score: 0.931
-   Standard deviation: 0.107
-
-   Conservation scoring method: Shannon entropy
-   Score range: 0 (highly variable) to 1 (perfectly conserved)
-
-============================================================
-MANUSCRIPT NUMBERS SUMMARY:
-============================================================
-Input genomes: 8,603 E. faecalis
-Unique genes identified: 5,566
-Core genes (≥95% prevalence): 1,251
-Genes in 100% of genomes: 223
-Total core gene sequences extracted: ~10,728,888
-Multiple sequence alignments created: 1,252
-Mean conservation score: 0.931
-
-Methodology:
-  - Core gene threshold: ≥95% prevalence
-  - Alignment software: MAFFT v7.313 with automatic algorithm selection
-  - Conservation metric: Shannon entropy-based scoring (0-1 scale)
+Note: Filtered 8020 sequences from 7 excluded assemblies
