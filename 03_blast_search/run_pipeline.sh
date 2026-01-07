@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=60
 #SBATCH --partition=cpu
 
-# Prokka output directory (updated for new run with 8,603 genomes)
+# Prokka output directory (updated for new run with 8,596 genomes)
 PROKKA_DIR="../prokka_output"
 
 # Unified BLAST pipeline runner

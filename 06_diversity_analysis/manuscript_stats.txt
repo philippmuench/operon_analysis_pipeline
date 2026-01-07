@@ -1,0 +1,50 @@
+Comparative Diversity Analysis Statistics for Manuscript
+============================================================
+Generated: 2026-01-07 12:15:00
+
+1. Input Data:
+   Core genes analyzed: 1,251
+   Mean core gene conservation: 0.931
+   Core gene conservation range: 0.519 - 1.000
+
+2. Operon Gene Conservation Rankings:
+   Operon genes analyzed: 7
+   Total core genes for ranking: 1,251
+
+   Individual gene rankings:
+     ptsA: 99.47% conservation, Rank 143/1251 (88.6th percentile)
+     ptsD: 99.25% conservation, Rank 258/1251 (79.5th percentile)
+     frpC: 99.23% conservation, Rank 271/1251 (78.4th percentile)
+     ptsC: 99.22% conservation, Rank 276/1251 (78.0th percentile)
+     ptsB: 99.12% conservation, Rank 362/1251 (71.1th percentile)
+     fruR: 99.02% conservation, Rank 447/1251 (64.3th percentile)
+     glpC: 98.55% conservation, Rank 748/1251 (40.3th percentile)
+
+3. Summary Statistics:
+   Mean operon conservation: 99.12%
+   Median operon conservation: 99.22%
+   Conservation range: 98.55% - 99.47%
+   Mean percentile rank: 71.5
+
+   Most conserved operon gene: ptsA (99.47%, rank 143)
+   Least conserved operon gene: glpC (98.55%, rank 748)
+
+4. Comparison to Core Genes:
+   Core gene mean conservation: 93.10%
+   Operon gene mean conservation: 99.12%
+   Difference: +6.02%
+   Operon genes are 6.02% MORE conserved than average core genes
+
+5. Output Files:
+   conservation_ranking_bars.png/pdf - Bar plot of conservation rankings
+   conservation_distribution.png/pdf - Distribution histogram
+   operon_conservation_summary.csv - Summary table
+
+============================================================
+MANUSCRIPT NUMBERS SUMMARY:
+============================================================
+Total core genes analyzed: 1,251
+Operon genes analyzed: 7
+Mean operon conservation: 99.12%
+Operon genes are more conserved than 71.5% of core genes on average
+Operon vs core gene conservation difference: +6.02%

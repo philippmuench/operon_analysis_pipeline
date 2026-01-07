@@ -58,7 +58,7 @@ def update_prevalence_stats():
     # Save updated prevalence
     result.to_csv(prevalence_file, index=False)
     print(f"\nUpdated {prevalence_file}")
-    print(f"  Max count: {result['count'].max()} (was 8603)")
+    print(f"  Max count: {result['count'].max()} (was 8596)")
     print(f"  Genes with 100% prevalence: {(result['prevalence'] == 1.0).sum()}")
 
     return result

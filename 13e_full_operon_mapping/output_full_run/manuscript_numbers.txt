@@ -1,6 +1,6 @@
 Full operon mapping summary
 ============================
-Assemblies scanned: 8603
+Assemblies scanned: 8596
 Legacy hits (>= 90% identity, >= 80% coverage): 8226
 Updated hits (>= 90% identity, >= 80% coverage): 8226
 Hits in both references: 8226
