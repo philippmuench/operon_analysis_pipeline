@@ -304,16 +304,27 @@ class OperonOrderAnalyzer:
             print(f"Error: No BLAST files found in {self.blast_dir}")
             return False
         
+        # Assemblies to exclude (not in metadata)
+        EXCLUDE_PATTERNS = [
+            'ENT_CA1913AA_AS', 'ENT_CA1914AA_AS', 'ENT_CA1915AA_AS',
+            'ENT_CA1916AA_AS', 'ENT_CA1917AA_AS', 'ENT_CA1918AA_AS', 'ENT_CA1919AA_AS'
+        ]
+
         # Extract unique genome IDs
         genome_ids = set()
         genome_files = defaultdict(list)
-        
+
         for bf in blast_files:
             basename = os.path.basename(bf)
             genome_id = basename.replace('_genes_blast.txt', '')
+
+            # Skip excluded assemblies
+            if any(excl in genome_id for excl in EXCLUDE_PATTERNS):
+                continue
+
             genome_ids.add(genome_id)
             genome_files[genome_id].append(bf)
-            
+
             # Also check for noncoding file
             noncoding_file = bf.replace('_genes_blast.txt', '_noncoding_blast.txt')
             if os.path.exists(noncoding_file):

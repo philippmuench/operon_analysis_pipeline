@@ -1,8 +1,8 @@
 Non-canonical Operon Gene Orders
 ============================================================
 
-Total complete operons: 8276
-Canonical order: 8257
+Total complete operons: 8269
+Canonical order: 8250
 Non-canonical order: 19
 
 Detailed non-canonical orders:

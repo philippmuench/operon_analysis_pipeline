@@ -1,19 +1,19 @@
 Operon Order and Synteny Analysis Summary
 ============================================================
 
-Total genomes analyzed: 8603
-Complete operons (7 genes): 8276 (96.2%)
+Total genomes analyzed: 8596
+Complete operons (7 genes): 8269 (96.2%)
 
 Gene presence:
-  frpC: 8277 (96.2%)
-  glpC: 8277 (96.2%)
-  ptsD: 8277 (96.2%)
-  ptsC: 8276 (96.2%)
-  ptsB: 8276 (96.2%)
-  ptsA: 8276 (96.2%)
-  fruR: 8277 (96.2%)
+  frpC: 8270 (96.2%)
+  glpC: 8270 (96.2%)
+  ptsD: 8270 (96.2%)
+  ptsC: 8269 (96.2%)
+  ptsB: 8269 (96.2%)
+  ptsA: 8269 (96.2%)
+  fruR: 8270 (96.2%)
 
 Operon organization:
-  Same contig: 8240 (95.8%)
-  Same strand: 8264 (96.1%)
-  Canonical order: 8257 (96.0%)
+  Same contig: 8233 (95.8%)
+  Same strand: 8257 (96.1%)
+  Canonical order: 8250 (96.0%)
