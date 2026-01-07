@@ -1077,8 +1077,18 @@ def main():
 
     gene_names = load_operon_gene_names(args.gene_reference_fasta)
 
+    # Assemblies to exclude (not in metadata)
+    EXCLUDE_PATTERNS = [
+        'ENT_CA1913AA_AS', 'ENT_CA1914AA_AS', 'ENT_CA1915AA_AS',
+        'ENT_CA1916AA_AS', 'ENT_CA1917AA_AS', 'ENT_CA1918AA_AS', 'ENT_CA1919AA_AS'
+    ]
+
     # Determine genome dirs
     genome_dirs = sorted([d for d in glob.glob(os.path.join(args.prokka_dir, "*")) if os.path.isdir(d)])
+
+    # Filter out excluded assemblies
+    genome_dirs = [d for d in genome_dirs if not any(excl in os.path.basename(d) for excl in EXCLUDE_PATTERNS)]
+
     if args.genome_list:
         with open(args.genome_list) as f:
             allowed = set(x.strip() for x in f if x.strip())
